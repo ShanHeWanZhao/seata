@@ -88,6 +88,9 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
 
     //region DEFAULT_GLOBAL_TRANSACTION_TIMEOUT
 
+    /**
+     * 默认60秒
+     */
     private static int defaultGlobalTransactionTimeout = 0;
 
     private void initDefaultGlobalTransactionTimeout() {
@@ -148,6 +151,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
             final GlobalTransactional globalTransactionalAnnotation =
                 getAnnotation(method, targetClass, GlobalTransactional.class);
             final GlobalLock globalLockAnnotation = getAnnotation(method, targetClass, GlobalLock.class);
+            // 是否禁用
             boolean localDisable = disable || (degradeCheck && degradeNum >= degradeCheckAllowTimes);
             if (!localDisable) {
                 if (globalTransactionalAnnotation != null) {

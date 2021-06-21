@@ -99,7 +99,10 @@ public abstract class AbstractNettyRemoting implements Disposable {
 
     /**
      * This container holds all processors.
-     * processor type {@link MessageType}
+     * processor type {@link MessageType} <p/>
+     * 请求处理器的映射关系
+     * key: MessageType，代表请求类型 <p/>
+     * value: 请求处理器和线程池的pair
      */
     protected final HashMap<Integer/*MessageType*/, Pair<RemotingProcessor, ExecutorService>> processorTable = new HashMap<>(32);
 
@@ -215,6 +218,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
      * @param rpcMessage rpc message
      */
     protected void sendAsync(Channel channel, RpcMessage rpcMessage) {
+        // 等待channel可写入
         channelWritableCheck(channel, rpcMessage.getBody());
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("write message:" + rpcMessage.getBody() + ", channel:" + channel + ",active?"
@@ -270,9 +274,10 @@ public abstract class AbstractNettyRemoting implements Disposable {
         Object body = rpcMessage.getBody();
         if (body instanceof MessageTypeAware) {
             MessageTypeAware messageTypeAware = (MessageTypeAware) body;
+            // 根据请求指定的类型获取对应的处理器和线程池
             final Pair<RemotingProcessor, ExecutorService> pair = this.processorTable.get((int) messageTypeAware.getTypeCode());
             if (pair != null) {
-                if (pair.getSecond() != null) {
+                if (pair.getSecond() != null) { // 线程池不为空，丢到线程池去做
                     try {
                         pair.getSecond().execute(() -> {
                             try {

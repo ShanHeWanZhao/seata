@@ -40,6 +40,9 @@ public class NettyRemotingServer extends AbstractNettyRemotingServer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyRemotingServer.class);
 
+    /**
+     * DefaultCoordinator
+     */
     private TransactionMessageHandler transactionMessageHandler;
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);

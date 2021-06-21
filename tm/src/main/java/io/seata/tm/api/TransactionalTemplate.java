@@ -63,14 +63,14 @@ public class TransactionalTemplate {
             switch (propagation) {
                 case NOT_SUPPORTED:
                     // If transaction is existing, suspend it.
-                    if (existingTransaction(tx)) {
+                    if (existingTransaction(tx)) { // 存在事务就先暂停，以非全局事务来处理
                         suspendedResourcesHolder = tx.suspend();
                     }
                     // Execute without transaction and return.
                     return business.execute();
                 case REQUIRES_NEW:
                     // If transaction is existing, suspend it, and then begin new transaction.
-                    if (existingTransaction(tx)) {
+                    if (existingTransaction(tx)) { // 存在事务就先暂停，开启一个新的全局事务
                         suspendedResourcesHolder = tx.suspend();
                         tx = GlobalTransactionContext.createNew();
                     }
@@ -174,7 +174,7 @@ public class TransactionalTemplate {
 
     private void completeTransactionAfterThrowing(TransactionInfo txInfo, GlobalTransaction tx, Throwable originalException) throws TransactionalExecutor.ExecutionException {
         //roll back
-        if (txInfo != null && txInfo.rollbackOn(originalException)) {
+        if (txInfo != null && txInfo.rollbackOn(originalException)) { // 触发回滚
             try {
                 rollbackTransaction(tx, originalException);
             } catch (TransactionException txe) {

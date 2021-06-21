@@ -49,6 +49,9 @@ public class ConnectionContext {
     };
 
     private String xid;
+    /**
+     * 分支事务id（当分支事务commit时会向server注册，server再返回注册成功的分支事务id）
+     */
     private Long branchId;
     private boolean isGlobalLockRequire;
     private Savepoint currentSavepoint = DEFAULT_SAVEPOINT;

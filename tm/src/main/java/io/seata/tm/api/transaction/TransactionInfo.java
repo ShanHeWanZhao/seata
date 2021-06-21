@@ -27,6 +27,9 @@ public final class TransactionInfo implements Serializable {
 
     private int timeOut;
 
+    /**
+     * 事务名（默认 方法名和参数的组合）
+     */
     private String name;
 
     private Set<RollbackRule> rollbackRules;

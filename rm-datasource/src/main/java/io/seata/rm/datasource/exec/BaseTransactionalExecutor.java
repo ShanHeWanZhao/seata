@@ -287,7 +287,9 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
     }
 
     /**
-     * build lockKey
+     * build lockKey <p/>
+     * 格式：
+     * 表名:第一行多主键一列值_第一行多主键二列值,第二行多主键一列值_第二行多主键二列值,
      *
      * @param rowsIncludingPK the records
      * @return the string as local key. the local key example(multi pk): "t_user:1_a,2_b"

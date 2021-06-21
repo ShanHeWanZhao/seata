@@ -32,7 +32,8 @@ import io.seata.rm.datasource.undo.SQLUndoLog;
 import io.seata.sqlparser.util.JdbcConstants;
 
 /**
- * The type My sql undo insert executor.
+ * The type My sql undo insert executor.<p/>
+ *  insert语句，回滚就应该是delete
  *
  * @author sharajava
  */

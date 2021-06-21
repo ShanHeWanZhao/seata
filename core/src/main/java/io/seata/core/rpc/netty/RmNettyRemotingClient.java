@@ -57,6 +57,9 @@ import static io.seata.common.Constants.DBKEYS_SPLIT_CHAR;
 public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RmNettyRemotingClient.class);
+    /**
+     * DefaultResourceManager
+     */
     private ResourceManager resourceManager;
     private static volatile RmNettyRemotingClient instance;
     private final AtomicBoolean initialized = new AtomicBoolean(false);

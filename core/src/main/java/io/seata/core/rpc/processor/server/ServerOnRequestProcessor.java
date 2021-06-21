@@ -94,6 +94,7 @@ public class ServerOnRequestProcessor implements RemotingProcessor {
     private void onRequestMessage(ChannelHandlerContext ctx, RpcMessage rpcMessage) {
         Object message = rpcMessage.getBody();
         RpcContext rpcContext = ChannelManager.getContextFromIdentified(ctx.channel());
+        // 打日志
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("server received:{},clientIp:{},vgroup:{}", message,
                 NetUtil.toIpAddress(ctx.channel().remoteAddress()), rpcContext.getTransactionServiceGroup());
@@ -106,6 +107,7 @@ public class ServerOnRequestProcessor implements RemotingProcessor {
                 LOGGER.error("put message to logQueue error: {}", e.getMessage(), e);
             }
         }
+        // 消息格式不对就直接返回了
         if (!(message instanceof AbstractMessage)) {
             return;
         }
@@ -122,6 +124,7 @@ public class ServerOnRequestProcessor implements RemotingProcessor {
             // the single send request message
             final AbstractMessage msg = (AbstractMessage) message;
             AbstractResultMessage result = transactionMessageHandler.onRequest(msg, rpcContext);
+            // 再异步发送处理结果给客户端
             remotingServer.sendAsyncResponse(rpcMessage, ctx.channel(), result);
         }
     }

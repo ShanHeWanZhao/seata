@@ -20,7 +20,8 @@ import io.seata.core.exception.TransactionException;
 /**
  * Transaction Manager.
  *
- * Define a global transaction and control it.
+ * Define a global transaction and control it. <p/>
+ * 全局事务的管理器，负责全局事务的开启，提交和回滚等
  *
  * @author sharajava
  */

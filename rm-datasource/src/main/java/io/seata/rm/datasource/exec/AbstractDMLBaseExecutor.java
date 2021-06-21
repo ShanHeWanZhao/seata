@@ -93,12 +93,17 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
      * @throws Exception the exception
      */
     protected T executeAutoCommitFalse(Object[] args) throws Exception {
+        // 只有mysql支持多主键
         if (!JdbcConstants.MYSQL.equalsIgnoreCase(getDbType()) && isMultiPk()) {
             throw new NotSupportYetException("multi pk only support mysql!");
         }
+        // 记录sql执行前镜像
         TableRecords beforeImage = beforeImage();
+        // 执行业务sql
         T result = statementCallback.execute(statementProxy.getTargetStatement(), args);
+        // 记录sql执行后的镜像
         TableRecords afterImage = afterImage(beforeImage);
+        // 准备undo_log（只是准备，还未写表的）
         prepareUndoLog(beforeImage, afterImage);
         return result;
     }

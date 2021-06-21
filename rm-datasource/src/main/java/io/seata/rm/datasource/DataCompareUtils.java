@@ -111,7 +111,8 @@ public class DataCompareUtils {
     }
 
     /**
-     * Is records equals result.
+     * Is records equals result.<p/>
+     * 比较更新前镜像和更新后镜像是否存在改变
      *
      * @param beforeImage the before image
      * @param afterImage  the after image

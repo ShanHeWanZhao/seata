@@ -123,14 +123,19 @@ public class DefaultCore implements Core {
         return getCore(branchSession.getBranchType()).branchRollback(globalSession, branchSession);
     }
 
+    /**
+     * 开启一个全局事务并存储，最后返回其xid
+     */
     @Override
     public String begin(String applicationId, String transactionServiceGroup, String name, int timeout)
         throws TransactionException {
+        // 创建globalSession
         GlobalSession session = GlobalSession.createGlobalSession(applicationId, transactionServiceGroup, name,
             timeout);
         MDC.put(RootContext.MDC_KEY_XID, session.getXid());
         session.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
 
+        // 开启session，根据不同的策略（file、db、redis）将session保存起来
         session.begin();
 
         // transaction start event
@@ -304,6 +309,7 @@ public class DefaultCore implements Core {
         if (globalSession.isSaga()) {
             success = getCore(BranchType.SAGA).doGlobalRollback(globalSession, retrying);
         } else {
+            // 获取每个分支事务并回滚
             Boolean result = SessionHelper.forEach(globalSession.getReverseSortedBranches(), branchSession -> {
                 BranchStatus currentBranchStatus = branchSession.getStatus();
                 if (currentBranchStatus == BranchStatus.PhaseOne_Failed) {
@@ -311,9 +317,11 @@ public class DefaultCore implements Core {
                     return CONTINUE;
                 }
                 try {
+                    // 分支事务的回滚
                     BranchStatus branchStatus = branchRollback(globalSession, branchSession);
                     switch (branchStatus) {
                         case PhaseTwo_Rollbacked:
+                            // 当前分支回滚成功，删除数据库branch_table中对应的记录
                             globalSession.removeBranch(branchSession);
                             LOGGER.info("Rollback branch transaction successfully, xid = {} branchId = {}", globalSession.getXid(), branchSession.getBranchId());
                             return CONTINUE;

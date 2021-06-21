@@ -43,7 +43,8 @@ public interface ConfigurationKeys {
     String MODE = "mode";
 
     /**
-     * The constant STORE_MODE.
+     * The constant STORE_MODE. <p/>
+     * store.mode
      */
     String STORE_MODE = STORE_PREFIX + MODE;
 
@@ -139,7 +140,8 @@ public interface ConfigurationKeys {
     String SERVICE_SESSION_RELOAD_READ_SIZE = STORE_FILE_PREFIX + "sessionReloadReadSize";
 
     /**
-     * The constant CLIENT_REPORT_SUCCESS_ENABLE.
+     * The constant CLIENT_REPORT_SUCCESS_ENABLE.<p/>
+     * client.rm.reportSuccessEnable
      */
     String CLIENT_REPORT_SUCCESS_ENABLE = CLIENT_RM_PREFIX + "reportSuccessEnable";
 
@@ -255,7 +257,8 @@ public interface ConfigurationKeys {
     String STORE_DB_MAX_WAIT = STORE_DB_PREFIX + "maxWait";
 
     /**
-     * The constant STORE_DB_URL.
+     * The constant STORE_DB_URL. <p/>
+     * store.db.url  全局事务存放的数据库url
      */
     String STORE_DB_URL = STORE_DB_PREFIX + "url";
 
@@ -516,7 +519,8 @@ public interface ConfigurationKeys {
     String BOSS_THREAD_SIZE = THREAD_FACTORY_PREFIX + "bossThreadSize";
 
     /**
-     * The constant WORKER_THREAD_SIZE
+     * The constant WORKER_THREAD_SIZE <p/>
+     * transport.threadFactory.workerThreadSize
      */
     String WORKER_THREAD_SIZE = THREAD_FACTORY_PREFIX + "workerThreadSize";
 

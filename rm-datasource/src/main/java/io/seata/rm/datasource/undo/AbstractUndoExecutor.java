@@ -229,7 +229,7 @@ public abstract class AbstractUndoExecutor {
         // Compare current data with before data
         // No need undo if the before data snapshot is equivalent to the after data snapshot.
         Result<Boolean> beforeEqualsAfterResult = DataCompareUtils.isRecordsEquals(beforeRecords, afterRecords);
-        if (beforeEqualsAfterResult.getResult()) {
+        if (beforeEqualsAfterResult.getResult()) { // 镜像相同，直接返回false，不用执行回滚操作了
             if (LOGGER.isInfoEnabled()) {
                 LOGGER.info("Stop rollback because there is no data change " +
                         "between the before data snapshot and the after data snapshot.");

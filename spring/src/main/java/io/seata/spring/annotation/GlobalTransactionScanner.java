@@ -203,6 +203,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Initializing Global Transaction Clients ... ");
         }
+        // applicationId和txServiceGroup必须存在
         if (StringUtils.isNullOrEmpty(applicationId) || StringUtils.isNullOrEmpty(txServiceGroup)) {
             throw new IllegalArgumentException(String.format("applicationId: %s, txServiceGroup: %s", applicationId, txServiceGroup));
         }
@@ -255,7 +256,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
      */
     @Override
     protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
-        // do checkers
+        // do checkers  ScannerChecker检查
         if (!doCheckers(bean, beanName)) {
             return bean;
         }
@@ -314,6 +315,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     private boolean doCheckers(Object bean, String beanName) {
         if (PROXYED_SET.contains(beanName) || EXCLUDE_BEAN_NAME_SET.contains(beanName)
                 || FactoryBean.class.isAssignableFrom(bean.getClass())) {
+            // 已经代理了 or 排除的 or FactoryBean就不包装
             return false;
         }
 
@@ -449,6 +451,9 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     //endregion the methods about findAddSeataAdvisorPosition  END
 
 
+    /**
+     * class或其method上是否存在@GlobalTransactional或@GlobalLock注解
+     */
     private boolean existsAnnotation(Class<?>[] classes) {
         if (CollectionUtils.isNotEmpty(classes)) {
             for (Class<?> clazz : classes) {
@@ -497,6 +502,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
             return;
         }
         if (initialized.compareAndSet(false, true)) {
+            // 初始化RM和TM
             initClient();
         }
     }

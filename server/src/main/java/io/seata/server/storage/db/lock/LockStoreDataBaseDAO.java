@@ -127,7 +127,7 @@ public class LockStoreDataBaseDAO implements LockStore {
             String currentXID = lockDOs.get(0).getXid();
             while (rs.next()) {
                 String dbXID = rs.getString(ServerTableColumnsName.LOCK_TABLE_XID);
-                if (!StringUtils.equals(dbXID, currentXID)) {
+                if (!StringUtils.equals(dbXID, currentXID)) { // 当前资源已近被其他全局事务给上锁了
                     if (LOGGER.isInfoEnabled()) {
                         String dbPk = rs.getString(ServerTableColumnsName.LOCK_TABLE_PK);
                         String dbTableName = rs.getString(ServerTableColumnsName.LOCK_TABLE_TABLE_NAME);
@@ -135,7 +135,7 @@ public class LockStoreDataBaseDAO implements LockStore {
                         LOGGER.info("Global lock on [{}:{}] is holding by xid {} branchId {}", dbTableName, dbPk, dbXID,
                             dbBranchId);
                     }
-                    canLock &= false;
+                    canLock = false;
                     break;
                 }
                 dbExistedRowKeys.add(rs.getString(ServerTableColumnsName.LOCK_TABLE_ROW_KEY));

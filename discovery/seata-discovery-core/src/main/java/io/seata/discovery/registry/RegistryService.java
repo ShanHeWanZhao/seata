@@ -101,6 +101,7 @@ public interface RegistryService<T> {
      * @return the service group name
      */
     default String getServiceGroup(String key) {
+        // service.vgroupMapping. + key
         key = PREFIX_SERVICE_ROOT + CONFIG_SPLIT_CHAR + PREFIX_SERVICE_MAPPING + key;
         if (!SERVICE_GROUP_NAME.contains(key)) {
             ConfigurationCache.addConfigListener(key);

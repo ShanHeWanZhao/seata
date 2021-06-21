@@ -73,6 +73,7 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
     @Override
     protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
         // we only care DataSource bean
+        // 非DataSource就不代理
         if (!(bean instanceof DataSource)) {
             return bean;
         }

@@ -104,6 +104,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     private NettyClientChannelManager clientChannelManager;
     private final NettyPoolKey.TransactionRole transactionRole;
     private ExecutorService mergeSendExecutorService;
+    /**
+     * DefaultRMHandler
+     */
     private TransactionMessageHandler transactionMessageHandler;
 
     @Override
@@ -139,6 +142,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     @Override
     public Object sendSyncRequest(Object msg) throws TimeoutException {
         String serverAddress = loadBalance(getTransactionServiceGroup(), msg);
+        // 默认30秒
         int timeoutMillis = NettyClientConfig.getRpcRequestTimeout();
         RpcMessage rpcMessage = buildRequestMessage(msg, ProtocolConstants.MSGTYPE_RESQUEST_SYNC);
 
