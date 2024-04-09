@@ -18,14 +18,22 @@ package io.seata.core.rpc.netty;
 import io.seata.core.protocol.AbstractMessage;
 
 /**
- * The type Netty pool key.
+ * The type Netty pool key. <p/>
+ * 一个NettyPoolKey就可以唯一代表以一种客户端类型（RM或TM）连接服务端集群中的某一个服务的标识
  *
  * @author slievrly
  */
 public class NettyPoolKey {
 
     private TransactionRole transactionRole;
+    /**
+     * 服务端的地址
+     */
     private String address;
+    /**
+     * 对于RM，就是RegisterRMRequest <p/>
+     * 对于TM，就是RegisterTMRequest
+     */
     private AbstractMessage message;
 
     /**

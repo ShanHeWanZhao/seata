@@ -156,10 +156,11 @@ public class DefaultCore implements Core {
 
         boolean shouldCommit = SessionHolder.lockAndExecute(globalSession, () -> {
             // Highlight: Firstly, close the session, then no more branch can be registered.
+            // 关闭GlobalSession，并释放锁资源
             globalSession.closeAndClean();
             if (globalSession.getStatus() == GlobalStatus.Begin) {
-                if (globalSession.canBeCommittedAsync()) {
-                    globalSession.asyncCommit();
+                if (globalSession.canBeCommittedAsync()) { // 异步提交，交给定时任务线程池去做
+                    globalSession.asyncCommit(); // 将全局事务的状态修改为AsyncCommitting
                     return false;
                 } else {
                     globalSession.changeStatus(GlobalStatus.Committing);
@@ -179,6 +180,7 @@ public class DefaultCore implements Core {
                 return globalSession.getStatus();
             }
         } else {
+            // AsyncCommitting状态的直接完结
             return globalSession.getStatus() == GlobalStatus.AsyncCommitting ? GlobalStatus.Committed : globalSession.getStatus();
         }
     }
@@ -202,6 +204,13 @@ public class DefaultCore implements Core {
 
                 BranchStatus currentStatus = branchSession.getStatus();
                 if (currentStatus == BranchStatus.PhaseOne_Failed) {
+                    // 代表当前全局事务的参与者rollback本地事务了，直接删除这个分支事务
+                    /*
+                        所以，出现这种情况就代表全局事务的参与者回滚了，但是没有被全局事务的发起者感知到异常（参与者回滚），
+                        全局事务还是提交了。
+                        这就告诉我们，全局事务的参与者回滚了事务，一定要让全局事务的发起者感知到异常并触发全局事务的回滚，
+                        否则这就达不到分布式事务的目的
+                     */
                     globalSession.removeBranch(branchSession);
                     return CONTINUE;
                 }
@@ -209,7 +218,7 @@ public class DefaultCore implements Core {
                     BranchStatus branchStatus = getCore(branchSession.getBranchType()).branchCommit(globalSession, branchSession);
 
                     switch (branchStatus) {
-                        case PhaseTwo_Committed:
+                        case PhaseTwo_Committed: // commit成功，直接删除这个branch
                             globalSession.removeBranch(branchSession);
                             return CONTINUE;
                         case PhaseTwo_CommitFailed_Unretryable:
@@ -313,6 +322,7 @@ public class DefaultCore implements Core {
             Boolean result = SessionHelper.forEach(globalSession.getReverseSortedBranches(), branchSession -> {
                 BranchStatus currentBranchStatus = branchSession.getStatus();
                 if (currentBranchStatus == BranchStatus.PhaseOne_Failed) {
+                    // 代表分支事务回滚了，不用我们再手动生成补偿sql执行回滚操作
                     globalSession.removeBranch(branchSession);
                     return CONTINUE;
                 }

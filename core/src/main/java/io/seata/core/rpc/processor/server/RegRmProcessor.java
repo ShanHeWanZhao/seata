@@ -59,6 +59,7 @@ public class RegRmProcessor implements RemotingProcessor {
 
     private void onRegRmMessage(ChannelHandlerContext ctx, RpcMessage rpcMessage) {
         RegisterRMRequest message = (RegisterRMRequest) rpcMessage.getBody();
+        // 获取客户端的地址
         String ipAndPort = NetUtil.toStringAddress(ctx.channel().remoteAddress());
         boolean isSuccess = false;
         String errorInfo = StringUtils.EMPTY;

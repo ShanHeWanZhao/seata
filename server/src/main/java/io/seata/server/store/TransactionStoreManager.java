@@ -55,7 +55,8 @@ public interface TransactionStoreManager {
     GlobalSession readSession(String xid, boolean withBranchSessions);
 
     /**
-     * Read session by status list.
+     * Read session by status list. <p/>
+     * 根据指定条件查询出GlobalSession并关联查询出其所有的BranchSession
      *
      * @param sessionCondition the session condition
      * @return the list

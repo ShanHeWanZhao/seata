@@ -80,6 +80,10 @@ public interface StarterConstants {
 
 
     int MAP_CAPACITY = 64;
+    /**
+     * 支持spring的属性配置缓存 <p/>
+     * key为配置的前缀，value为对应的 spring properties bean的class（再通过beanFactory获取对应的bean）
+     */
     HashMap<String, Class<?>> PROPERTY_BEAN_MAP = new HashMap<>(MAP_CAPACITY);
     /**
      * The following special keys need to be normalized.

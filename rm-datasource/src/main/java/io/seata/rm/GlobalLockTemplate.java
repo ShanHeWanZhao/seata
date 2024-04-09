@@ -27,7 +27,7 @@ public class GlobalLockTemplate {
 
     public Object execute(GlobalLockExecutor executor) throws Throwable {
         boolean alreadyInGlobalLock = RootContext.requireGlobalLock();
-        if (!alreadyInGlobalLock) {
+        if (!alreadyInGlobalLock) { // 不存在锁就绑定锁
             RootContext.bindGlobalLockFlag();
         }
 

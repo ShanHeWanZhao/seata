@@ -49,6 +49,9 @@ public class DataSourceManager extends AbstractResourceManager {
 
     private final AsyncWorker asyncWorker = new AsyncWorker(this);
 
+    /**
+     * key为mysql的url，value为DataSourceProxy
+     */
     private final Map<String, Resource> dataSourceCache = new ConcurrentHashMap<>();
 
     @Override

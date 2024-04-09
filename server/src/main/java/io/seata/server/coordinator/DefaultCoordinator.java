@@ -100,7 +100,8 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     protected static final long TIMEOUT_RETRY_PERIOD = CONFIG.getLong(ConfigurationKeys.TIMEOUT_RETRY_PERIOD, 1000L);
 
     /**
-     * The Transaction undo log delete period.
+     * The Transaction undo log delete period.<p/>
+     * undo_log定时删除任务执行时间间隔：默认一天
      */
     protected static final long UNDO_LOG_DELETE_PERIOD = CONFIG.getLong(
         ConfigurationKeys.TRANSACTION_UNDO_LOG_DELETE_PERIOD, 24 * 60 * 60 * 1000);
@@ -127,6 +128,9 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     private ScheduledThreadPoolExecutor retryCommitting = new ScheduledThreadPoolExecutor(1,
         new NamedThreadFactory("RetryCommitting", 1));
 
+    /**
+     * 异步Commit的线程池
+     */
     private ScheduledThreadPoolExecutor asyncCommitting = new ScheduledThreadPoolExecutor(1,
         new NamedThreadFactory("AsyncCommitting", 1));
 
@@ -341,9 +345,11 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     }
 
     /**
-     * Handle async committing.
+     * Handle async committing. <p/>
+     * 异步处理全局事务的commit
      */
     protected void handleAsyncCommitting() {
+        // 对于db模式来说，查询所有状态为AsyncCommitting的GlobalSession（其所有的BranchSession也会查出来）
         Collection<GlobalSession> asyncCommittingSessions = SessionHolder.getAsyncCommittingSessionManager()
             .allSessions();
         if (CollectionUtils.isEmpty(asyncCommittingSessions)) {
@@ -377,6 +383,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
         }
         short saveDays = CONFIG.getShort(ConfigurationKeys.TRANSACTION_UNDO_LOG_SAVE_DAYS,
             UndoLogDeleteRequest.DEFAULT_SAVE_DAYS);
+        // 向每一个RM都发送undo_log的delete请求
         for (Map.Entry<String, Channel> channelEntry : rmChannels.entrySet()) {
             String resourceId = channelEntry.getKey();
             UndoLogDeleteRequest deleteRequest = new UndoLogDeleteRequest();
@@ -420,6 +427,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             }
         }, 0, COMMITTING_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        // 启动异步Commit定时任务
         asyncCommitting.scheduleAtFixedRate(() -> {
             boolean lock = SessionHolder.asyncCommittingLock();
             if (lock) {

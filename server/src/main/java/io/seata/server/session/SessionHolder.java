@@ -79,6 +79,10 @@ public class SessionHolder {
     public static final String DEFAULT_SESSION_STORE_FILE_DIR = "sessionStore";
 
     private static SessionManager ROOT_SESSION_MANAGER;
+    /**
+     * 异步commit全局事务的session管理器 <p/>
+     * taskName为async.commit.data
+     */
     private static SessionManager ASYNC_COMMITTING_SESSION_MANAGER;
     private static SessionManager RETRY_COMMITTING_SESSION_MANAGER;
     private static SessionManager RETRY_ROLLBACKING_SESSION_MANAGER;
@@ -90,7 +94,7 @@ public class SessionHolder {
      * @throws IOException the io exception
      */
     public static void init(String mode) {
-        if (StringUtils.isBlank(mode)) {
+        if (StringUtils.isBlank(mode)) { // 如果没有指定session保存模式，默认用file
             mode = CONFIG.getConfig(ConfigurationKeys.STORE_SESSION_MODE,
                 CONFIG.getConfig(ConfigurationKeys.STORE_MODE, SERVER_DEFAULT_STORE_MODE));
         }

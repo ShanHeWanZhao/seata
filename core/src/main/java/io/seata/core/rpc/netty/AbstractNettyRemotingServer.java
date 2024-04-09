@@ -63,6 +63,7 @@ public abstract class AbstractNettyRemotingServer extends AbstractNettyRemoting 
 
     @Override
     public Object sendSyncRequest(String resourceId, String clientId, Object msg) throws TimeoutException {
+        // 根据resourceId和clientId拿到对应客户端的Channel
         Channel channel = ChannelManager.getChannel(resourceId, clientId);
         if (channel == null) {
             throw new RuntimeException("rm client is not connected. dbkey:" + resourceId + ",clientId:" + clientId);

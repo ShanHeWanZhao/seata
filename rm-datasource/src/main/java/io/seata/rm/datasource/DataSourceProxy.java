@@ -64,7 +64,8 @@ public class DataSourceProxy extends AbstractDataSourceProxy implements Resource
     private String userName;
 
     /**
-     * Enable the table meta checker
+     * Enable the table meta checker <p/>
+     * 默认为false
      */
     private static boolean ENABLE_TABLE_META_CHECKER_ENABLE = ConfigurationFactory.getInstance().getBoolean(
         ConfigurationKeys.CLIENT_TABLE_META_CHECK_ENABLE, DEFAULT_CLIENT_TABLE_META_CHECK_ENABLE);

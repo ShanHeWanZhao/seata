@@ -171,6 +171,7 @@ public class NettyClientBootstrap implements RemotingBootstrap {
         Channel channel;
         ChannelFuture f = this.bootstrap.connect(address);
         try {
+            // 默认等待10秒
             f.await(this.nettyClientConfig.getConnectTimeoutMillis(), TimeUnit.MILLISECONDS);
             if (f.isCancelled()) {
                 throw new FrameworkException(f.cause(), "connect cancelled, can not connect to services-server.");

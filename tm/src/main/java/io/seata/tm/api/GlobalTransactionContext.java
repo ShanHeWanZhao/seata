@@ -30,7 +30,8 @@ public class GlobalTransactionContext {
     }
 
     /**
-     * Try to create a new GlobalTransaction.
+     * Try to create a new GlobalTransaction. <p/>
+     * 创建一个全局事务发起者的事务
      *
      * @return the new global transaction
      */

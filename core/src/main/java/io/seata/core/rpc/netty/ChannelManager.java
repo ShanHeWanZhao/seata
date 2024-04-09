@@ -92,6 +92,10 @@ public class ChannelManager {
         return IDENTIFIED_CHANNELS.get(channel);
     }
 
+    /**
+     * 客户端id格式：applicationId:ip:port
+     * @return
+     */
     private static String buildClientId(String applicationId, Channel channel) {
         return applicationId + Constants.CLIENT_ID_SPLIT_CHAR + ChannelUtil.getAddressFromChannel(channel);
     }

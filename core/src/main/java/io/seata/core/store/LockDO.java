@@ -36,6 +36,11 @@ public class LockDO {
 
     private String pk;
 
+    /**
+     * 具体的上锁资源，格式：<p/>
+     * jdbcUrl^^^tableName^^^primaryKeyValue <p/>
+     * 资源id（对于db来说就是jdbcUrl）+ 分隔符（^^^） + 表名 + 分隔符（^^^） + 主键值，所以能通过rowKey精确的定位到某一行数据
+     */
     private String rowKey;
 
     /**

@@ -78,7 +78,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     @Override
     public T doExecute(Object... args) throws Throwable {
         AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
-        if (connectionProxy.getAutoCommit()) {
+        if (connectionProxy.getAutoCommit()) { // 当前事务为自动提交（代表没有主动开启事务）
             return executeAutoCommitTrue(args);
         } else {
             return executeAutoCommitFalse(args);
@@ -131,7 +131,9 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
 
 
     /**
-     * Execute auto commit true t.
+     * Execute auto commit true t. <p/>
+     * 为autoCommit为true准备的sql执行 <br/>
+     * 先设置autoCommit为false，最后手动commit（保证就算没有开启本地事务也会走seata的commit）
      *
      * @param args the args
      * @return the t
@@ -140,9 +142,11 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     protected T executeAutoCommitTrue(Object[] args) throws Throwable {
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         try {
+            // 改为非自动提交事务
             connectionProxy.changeAutoCommit();
+            // 锁重试机制来commit
             return new LockRetryPolicy(connectionProxy).execute(() -> {
-                T result = executeAutoCommitFalse(args);
+                T result = executeAutoCommitFalse(args); // 走非自动提交事务的commit逻辑（准备undo日志）
                 connectionProxy.commit();
                 return result;
             });

@@ -45,7 +45,7 @@ public interface GlobalTransaction {
 
     /**
      * Begin a new global transaction with given timeout and given name. <p/>
-     * 开启一个全局事务，使用netty调用服务端开启全局事务，再返回其xid
+     * 开启一个全局事务，使用netty调用服务端开启全局事务，再将服务端返回其xid绑定到当前线程上线文
      *
      * @param timeout Given timeout in MILLISECONDS. 超时时间，默认60秒
      * @param name    Given name. 事务名，@GlobalTransactional的name（默认用方法名和参数的组合）

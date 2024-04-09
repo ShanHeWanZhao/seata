@@ -47,6 +47,9 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
      */
     private TransactionManager transactionManager;
 
+    /**
+     * 当前全局事务id
+     */
     private String xid;
 
     /**
@@ -162,7 +165,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     @Override
     public void rollback() throws TransactionException {
-        if (role == GlobalTransactionRole.Participant) {
+        if (role == GlobalTransactionRole.Participant) { // 事务的参与者不应该来操作回滚
             // Participant has no responsibility of rollback
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Ignore Rollback(): just involved in global transaction [{}]", xid);
@@ -170,7 +173,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
             return;
         }
         assertXIDNotNull();
-
+        // 默认5次的全局事务回滚重试
         int retry = ROLLBACK_RETRY_COUNT <= 0 ? DEFAULT_TM_ROLLBACK_RETRY_COUNT : ROLLBACK_RETRY_COUNT;
         try {
             while (retry > 0) {

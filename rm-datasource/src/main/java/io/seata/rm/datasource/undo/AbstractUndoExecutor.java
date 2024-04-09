@@ -72,7 +72,8 @@ public abstract class AbstractUndoExecutor {
     private static final String CHECK_SQL_TEMPLATE = "SELECT * FROM %s WHERE %s FOR UPDATE";
 
     /**
-     * Switch of undo data validation
+     * Switch of undo data validation <p/>
+     * 是否开启undo_log的镜像前后校验，默认为true
      */
     public static final boolean IS_UNDO_DATA_VALIDATION_ENABLE = ConfigurationFactory.getInstance()
             .getBoolean(ConfigurationKeys.TRANSACTION_UNDO_DATA_VALIDATION, DEFAULT_TRANSACTION_UNDO_DATA_VALIDATION);

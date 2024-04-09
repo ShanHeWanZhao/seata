@@ -40,8 +40,14 @@ public class LockRetryController {
         ConfigurationCache.addConfigListener(ConfigurationKeys.CLIENT_LOCK_RETRY_TIMES, LISTENER);
     }
 
+    /**
+     * 锁冲突重试时间间隔（默认：10，单位：毫秒）
+     */
     private int lockRetryInterval;
 
+    /**
+     * 锁冲突重试次数（默认：30）
+     */
     private int lockRetryTimes;
 
     /**

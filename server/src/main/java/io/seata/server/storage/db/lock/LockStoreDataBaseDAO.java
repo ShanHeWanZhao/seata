@@ -104,6 +104,7 @@ public class LockStoreDataBaseDAO implements LockStore {
         Set<String> dbExistedRowKeys = new HashSet<>();
         boolean originalAutoCommit = true;
         if (lockDOs.size() > 1) {
+            // 同一资源去重
             lockDOs = lockDOs.stream().filter(LambdaUtils.distinctByKey(LockDO::getRowKey)).collect(Collectors.toList());
         }
         try {
@@ -118,33 +119,39 @@ public class LockStoreDataBaseDAO implements LockStore {
             }
             boolean canLock = true;
             //query
+            // select * from lock_table where row_key in (?,?,? ...)
             String checkLockSQL = LockStoreSqlFactory.getLogStoreSql(dbType).getCheckLockableSql(lockTable, sj.toString());
             ps = conn.prepareStatement(checkLockSQL);
             for (int i = 0; i < lockDOs.size(); i++) {
                 ps.setString(i + 1, lockDOs.get(i).getRowKey());
             }
             rs = ps.executeQuery();
+            // xid是相同的，所以只需要获取一个
             String currentXID = lockDOs.get(0).getXid();
             while (rs.next()) {
                 String dbXID = rs.getString(ServerTableColumnsName.LOCK_TABLE_XID);
-                if (!StringUtils.equals(dbXID, currentXID)) { // 当前资源已近被其他全局事务给上锁了
-                    if (LOGGER.isInfoEnabled()) {
+                if (!StringUtils.equals(dbXID, currentXID)) {
+                    // 只要有一个锁资源不是被当前全局事务占有，代表锁冲突，上锁失败
+                    if (LOGGER.isInfoEnabled()) { // 打个日志
                         String dbPk = rs.getString(ServerTableColumnsName.LOCK_TABLE_PK);
                         String dbTableName = rs.getString(ServerTableColumnsName.LOCK_TABLE_TABLE_NAME);
                         Long dbBranchId = rs.getLong(ServerTableColumnsName.LOCK_TABLE_BRANCH_ID);
                         LOGGER.info("Global lock on [{}:{}] is holding by xid {} branchId {}", dbTableName, dbPk, dbXID,
                             dbBranchId);
                     }
-                    canLock = false;
+                    canLock = false; // 锁失败
                     break;
                 }
+                // 保存需要重复上锁的资源
                 dbExistedRowKeys.add(rs.getString(ServerTableColumnsName.LOCK_TABLE_ROW_KEY));
             }
 
-            if (!canLock) {
-                conn.rollback();
+            if (!canLock) { // 锁失败直接回滚并返回
+                conn.rollback(); // 语义上的回滚（其实到这里这个连接只有查询，所以不会回滚什么）
                 return false;
             }
+            // =========== 到这，正常情况下就代表能够锁成功了 ==================
+            // 未上锁的资源集
             List<LockDO> unrepeatedLockDOs = null;
             if (CollectionUtils.isNotEmpty(dbExistedRowKeys)) {
                 unrepeatedLockDOs = lockDOs.stream().filter(lockDO -> !dbExistedRowKeys.contains(lockDO.getRowKey()))
@@ -153,11 +160,13 @@ public class LockStoreDataBaseDAO implements LockStore {
                 unrepeatedLockDOs = lockDOs;
             }
             if (CollectionUtils.isEmpty(unrepeatedLockDOs)) {
+                // 不存在未上锁的资源集，代表资源打算二次上锁，就不需要插入了，直接返回成功
                 conn.rollback();
                 return true;
             }
             //lock
-            if (unrepeatedLockDOs.size() == 1) {
+            // 需要新上锁的资源，将LockDO数据插入到lock_table表中
+            if (unrepeatedLockDOs.size() == 1) { // 单个资源
                 LockDO lockDO = unrepeatedLockDOs.get(0);
                 if (!doAcquireLock(conn, lockDO)) {
                     if (LOGGER.isInfoEnabled()) {
@@ -166,7 +175,7 @@ public class LockStoreDataBaseDAO implements LockStore {
                     conn.rollback();
                     return false;
                 }
-            } else {
+            } else { // 多个资源
                 if (!doAcquireLocks(conn, unrepeatedLockDOs)) {
                     if (LOGGER.isInfoEnabled()) {
                         LOGGER.info("Global lock batch acquire failed, xid {} branchId {} pks {}", unrepeatedLockDOs.get(0).getXid(),
@@ -176,6 +185,7 @@ public class LockStoreDataBaseDAO implements LockStore {
                     return false;
                 }
             }
+            // 插入成功，commit并返回true
             conn.commit();
             return true;
         } catch (SQLException e) {

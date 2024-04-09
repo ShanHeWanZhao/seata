@@ -94,7 +94,13 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     private MethodInterceptor interceptor;
     private MethodInterceptor globalTransactionalInterceptor;
 
+    /**
+     *  默认为 ${spring.application.name}
+     */
     private final String applicationId;
+    /**
+     * 默认为  ${spring.application.name}-seata-service-group
+     */
     private final String txServiceGroup;
     private final int mode;
     private String accessKey;
@@ -278,7 +284,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                     Class<?>[] interfacesIfJdk = SpringProxyUtils.findInterfaces(bean);
 
                     if (!existsAnnotation(new Class[]{serviceInterface})
-                        && !existsAnnotation(interfacesIfJdk)) {
+                        && !existsAnnotation(interfacesIfJdk)) { // @GlobalTransactional或@GlobalLock不存在当前类的任何方法或接口上
                         return bean;
                     }
 
@@ -300,6 +306,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                     int pos;
                     for (Advisor avr : advisor) {
                         // Find the position based on the advisor's order, and add to advisors by pos
+                        // 根据SeataInterceptorPosition的位置返回一个符合条件的插入位置索引
                         pos = findAddSeataAdvisorPosition(advised, avr);
                         advised.addAdvisor(pos, avr);
                     }

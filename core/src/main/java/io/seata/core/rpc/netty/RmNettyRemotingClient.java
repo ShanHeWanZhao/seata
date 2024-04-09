@@ -66,6 +66,9 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
     private static final long KEEP_ALIVE_TIME = Integer.MAX_VALUE;
     private static final int MAX_QUEUE_SIZE = 20000;
     private String applicationId;
+    /**
+     * 默认：${spring.application.name}-seata-service-group
+     */
     private String transactionServiceGroup;
 
     @Override
@@ -270,6 +273,9 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
         return transactionServiceGroup;
     }
 
+    /**
+     * 注册一些RM（资源管理器）的消息处理器
+     */
     private void registerProcessor() {
         // 1.registry rm client handle branch commit processor
         RmBranchCommitProcessor rmBranchCommitProcessor = new RmBranchCommitProcessor(getTransactionMessageHandler(), this);

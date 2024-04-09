@@ -117,7 +117,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
                 clientChannelManager.reconnect(getTransactionServiceGroup());
             }
         }, SCHEDULE_DELAY_MILLS, SCHEDULE_INTERVAL_MILLS, TimeUnit.MILLISECONDS);
-        if (NettyClientConfig.isEnableClientBatchSendRequest()) {
+        if (NettyClientConfig.isEnableClientBatchSendRequest()) { // 启用了批量发送消息，单起一个线程池执行批量消息发送任务
             mergeSendExecutorService = new ThreadPoolExecutor(MAX_MERGE_SEND_THREAD,
                 MAX_MERGE_SEND_THREAD,
                 KEEP_ALIVE_TIME, TimeUnit.MILLISECONDS,
@@ -321,7 +321,8 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     protected abstract String getTransactionServiceGroup();
 
     /**
-     * The type Merged send runnable.
+     * The type Merged send runnable. <p/>
+     * 批量发送客户端seata消息的Runnable
      */
     private class MergedSendRunnable implements Runnable {
 

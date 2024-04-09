@@ -48,19 +48,33 @@ class NettyClientChannelManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClientChannelManager.class);
 
+    /**
+     * Channel获取时的锁，key为address（例如 172.0.0.1:8080）
+     */
     private final ConcurrentMap<String, Object> channelLocks = new ConcurrentHashMap<>();
 
+    /**
+     * serverAddress和其对应的NettyPoolKey的缓存
+     */
     private final ConcurrentMap<String, NettyPoolKey> poolKeyMap = new ConcurrentHashMap<>();
 
+    /**
+     * serverAddress和连接其的Channel缓存 <p/>
+     * key为serverAddress，value为连接其的Channel
+     */
     private final ConcurrentMap<String, Channel> channels = new ConcurrentHashMap<>();
 
     private final GenericKeyedObjectPool<NettyPoolKey, Channel> nettyClientKeyPool;
 
+    /**
+     * 根据serverAddress构造对应的NettyPoolKey的Function
+     */
     private Function<String, NettyPoolKey> poolKeyFunction;
 
     NettyClientChannelManager(final NettyPoolableFactory keyPoolableFactory, final Function<String, NettyPoolKey> poolKeyFunction,
                                      final NettyClientConfig clientConfig) {
         nettyClientKeyPool = new GenericKeyedObjectPool<>(keyPoolableFactory);
+        // 配置对象池
         nettyClientKeyPool.setConfig(getNettyPoolConfig(clientConfig));
         this.poolKeyFunction = poolKeyFunction;
     }
@@ -207,17 +221,20 @@ class NettyClientChannelManager {
 
     private Channel doConnect(String serverAddress) {
         Channel channelToServer = channels.get(serverAddress);
-        if (channelToServer != null && channelToServer.isActive()) {
+        if (channelToServer != null && channelToServer.isActive()) { // channel缓存存在并且激活直接返回
             return channelToServer;
         }
         Channel channelFromPool;
         try {
+            // 根据serverAddress构造对应的NettyPoolKey
             NettyPoolKey currentPoolKey = poolKeyFunction.apply(serverAddress);
+            // 缓存
             NettyPoolKey previousPoolKey = poolKeyMap.putIfAbsent(serverAddress, currentPoolKey);
             if (previousPoolKey != null && previousPoolKey.getMessage() instanceof RegisterRMRequest) {
                 RegisterRMRequest registerRMRequest = (RegisterRMRequest) currentPoolKey.getMessage();
                 ((RegisterRMRequest) previousPoolKey.getMessage()).setResourceIds(registerRMRequest.getResourceIds());
             }
+            // 根据NettyPoolKey从对象池中获取Channel并缓存到channels
             channelFromPool = nettyClientKeyPool.borrowObject(poolKeyMap.get(serverAddress));
             channels.put(serverAddress, channelFromPool);
         } catch (Exception exx) {

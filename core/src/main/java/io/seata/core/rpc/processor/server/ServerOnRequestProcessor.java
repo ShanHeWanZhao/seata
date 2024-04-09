@@ -107,11 +107,10 @@ public class ServerOnRequestProcessor implements RemotingProcessor {
                 LOGGER.error("put message to logQueue error: {}", e.getMessage(), e);
             }
         }
-        // 消息格式不对就直接返回了
-        if (!(message instanceof AbstractMessage)) {
+        if (!(message instanceof AbstractMessage)) {// 消息格式不对就直接返回了
             return;
         }
-        if (message instanceof MergedWarpMessage) {
+        if (message instanceof MergedWarpMessage) { // 是是客户端批量消息格式
             AbstractResultMessage[] results = new AbstractResultMessage[((MergedWarpMessage) message).msgs.size()];
             for (int i = 0; i < results.length; i++) {
                 final AbstractMessage subMessage = ((MergedWarpMessage) message).msgs.get(i);
@@ -120,7 +119,7 @@ public class ServerOnRequestProcessor implements RemotingProcessor {
             MergeResultMessage resultMessage = new MergeResultMessage();
             resultMessage.setMsgs(results);
             remotingServer.sendAsyncResponse(rpcMessage, ctx.channel(), resultMessage);
-        } else {
+        } else { // 客户端提交的单个消息
             // the single send request message
             final AbstractMessage msg = (AbstractMessage) message;
             AbstractResultMessage result = transactionMessageHandler.onRequest(msg, rpcContext);

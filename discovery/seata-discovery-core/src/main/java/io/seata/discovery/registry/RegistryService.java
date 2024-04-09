@@ -107,6 +107,7 @@ public interface RegistryService<T> {
             ConfigurationCache.addConfigListener(key);
             SERVICE_GROUP_NAME.add(key);
         }
+        // 通过代理，最终是从 ServiceProperties类的vgroupMapping字段，用key来取的value
         return ConfigurationFactory.getInstance().getConfig(key);
     }
 }

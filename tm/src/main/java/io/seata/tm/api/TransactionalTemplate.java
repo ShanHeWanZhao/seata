@@ -109,7 +109,7 @@ public class TransactionalTemplate {
             }
 
             // 1.3 If null, create new transaction with role 'GlobalTransactionRole.Launcher'.
-            if (tx == null) {
+            if (tx == null) { // 全局事务的发起者
                 tx = GlobalTransactionContext.createNew();
             }
 
@@ -119,30 +119,38 @@ public class TransactionalTemplate {
             try {
                 // 2. If the tx role is 'GlobalTransactionRole.Launcher', send the request of beginTransaction to TC,
                 //    else do nothing. Of course, the hooks will still be triggered.
+                // 利用TM开启全局事务（只有全局事务的发起者开可以开启），注册到seata-server端并调用用户配置的钩子函数
                 beginTransaction(txInfo, tx);
 
                 Object rs;
                 try {
                     // Do Your Business
+                    // 执行业务代码
                     rs = business.execute();
                 } catch (Throwable ex) {
                     // 3. The needed business exception to rollback.
+                    // 触发全局事务回滚
                     completeTransactionAfterThrowing(txInfo, tx, ex);
                     throw ex;
                 }
 
                 // 4. everything is fine, commit.
+                // 全局事务提交（只有事务的发起者才能真正的提交）
                 commitTransaction(tx);
 
                 return rs;
             } finally {
                 //5. clear
+                // 全局事务配置（锁重试次数和锁重试时间间隔）回退（回退到上一个事务）或清除
                 resumeGlobalLockConfig(previousConfig);
+                // afterCompletion的钩子函数
                 triggerAfterCompletion();
+                // 钩子函数的clean
                 cleanUp();
             }
         } finally {
             // If the transaction is suspended, resume it.
+            // 上一个事务的resume，很简单，重新绑定上一个xid就行
             if (suspendedResourcesHolder != null) {
                 tx.resume(suspendedResourcesHolder);
             }

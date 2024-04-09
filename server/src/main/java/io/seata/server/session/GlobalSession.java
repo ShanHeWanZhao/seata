@@ -474,7 +474,8 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
     }
 
     /**
-     * Create global session global session.
+     * Create global session global session. <p/>
+     * 这时就会生成xid
      *
      * @param applicationId  the application id
      * @param txServiceGroup the tx service group
@@ -675,6 +676,9 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         return branchSessions;
     }
 
+    /**
+     * 直接copy一个新的GlobalSession，并设置状态为AsyncCommitting，保存到表中，等待定时任务执行
+     */
     public void asyncCommit() throws TransactionException {
         this.addSessionLifecycleListener(SessionHolder.getAsyncCommittingSessionManager());
         this.setStatus(GlobalStatus.AsyncCommitting);

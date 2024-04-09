@@ -71,6 +71,9 @@ public class RootContext {
 
     private static ContextCore CONTEXT_HOLDER = ContextCoreLoader.load();
 
+    /**
+     * 默认AT模式
+     */
     private static BranchType DEFAULT_BRANCH_TYPE;
 
     public static void setDefaultBranchType(BranchType defaultBranchType) {

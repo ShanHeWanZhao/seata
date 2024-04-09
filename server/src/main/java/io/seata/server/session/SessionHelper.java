@@ -87,7 +87,8 @@ public class SessionHelper {
     }
 
     /**
-     * End committed.
+     * End committed. <p/>
+     * 先将GlobalSession状态变为Committed，在释放锁信息并删除GlobalSession
      *
      * @param globalSession the global session
      * @throws TransactionException the transaction exception
