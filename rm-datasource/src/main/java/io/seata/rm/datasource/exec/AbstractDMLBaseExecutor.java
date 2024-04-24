@@ -79,6 +79,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     public T doExecute(Object... args) throws Throwable {
         AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         if (connectionProxy.getAutoCommit()) { // 当前事务为自动提交（代表没有主动开启事务）
+            // 一般就是只用了分布式事务但没有使用本地事务的情况。这时每条dml sql都会被当作分支事务来执行，即执行完后都会操作seata的commit来注册分支事务（增加了rpc通信压力）
             return executeAutoCommitTrue(args);
         } else {
             return executeAutoCommitFalse(args);

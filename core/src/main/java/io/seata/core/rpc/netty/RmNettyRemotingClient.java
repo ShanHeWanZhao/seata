@@ -277,6 +277,7 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
      * 注册一些RM（资源管理器）的消息处理器
      */
     private void registerProcessor() {
+        // 注册客户端事务 commit,rollback，undo log信息处理器（服务端主动发送的消息，对全局事务进行提交，回滚等操作）
         // 1.registry rm client handle branch commit processor
         RmBranchCommitProcessor rmBranchCommitProcessor = new RmBranchCommitProcessor(getTransactionMessageHandler(), this);
         super.registerProcessor(MessageType.TYPE_BRANCH_COMMIT, rmBranchCommitProcessor, messageExecutor);
@@ -286,6 +287,8 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
         // 3.registry rm handler undo log processor
         RmUndoLogProcessor rmUndoLogProcessor = new RmUndoLogProcessor(getTransactionMessageHandler());
         super.registerProcessor(MessageType.TYPE_RM_DELETE_UNDOLOG, rmUndoLogProcessor, messageExecutor);
+
+        // 注册服务端响应消息的处理器（RM发送事务相关请求，服务端会响应）
         // 4.registry TC response processor
         ClientOnResponseProcessor onResponseProcessor =
             new ClientOnResponseProcessor(mergeMsgMap, super.getFutures(), getTransactionMessageHandler());

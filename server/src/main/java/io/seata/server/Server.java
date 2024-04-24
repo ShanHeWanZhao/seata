@@ -58,8 +58,10 @@ public class Server {
         ParameterParser parameterParser = new ParameterParser(args);
 
         //initialize the metrics
+        // 统计相关功能初始化
         MetricsManager.get().init();
 
+        // 数据保存模式（db，file，或redis）
         System.setProperty(ConfigurationKeys.STORE_MODE, parameterParser.getStoreMode());
 
         ThreadPoolExecutor workingThreads = new ThreadPoolExecutor(NettyServerConfig.getMinServerPoolSize(),
@@ -67,6 +69,7 @@ public class Server {
                 new LinkedBlockingQueue<>(NettyServerConfig.getMaxTaskQueueSize()),
                 new NamedThreadFactory("ServerHandlerThread", NettyServerConfig.getMaxServerPoolSize()), new ThreadPoolExecutor.CallerRunsPolicy());
 
+        // 创建netty相关对象
         NettyRemotingServer nettyRemotingServer = new NettyRemotingServer(workingThreads);
         //server port (rpc netty port)
         nettyRemotingServer.setListenPort(parameterParser.getPort());
@@ -74,7 +77,9 @@ public class Server {
         //log store mode : file, db, redis
         SessionHolder.init(parameterParser.getSessionStoreMode());
         LockerManagerFactory.init(parameterParser.getLockStoreMode());
+        // 创建TC
         DefaultCoordinator coordinator = new DefaultCoordinator(nettyRemotingServer);
+        // 启动一些定时任务，包括异步全局事务commit操作
         coordinator.init();
         nettyRemotingServer.setHandler(coordinator);
         // register ShutdownHook
@@ -90,6 +95,7 @@ public class Server {
         }
         XID.setPort(nettyRemotingServer.getListenPort());
 
+        // 注册消息处理器并构建netty的ServerBootstrap，开启端口的监听
         nettyRemotingServer.init();
     }
 }

@@ -120,9 +120,10 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         }
         // Just check lock without requiring lock by now.
         try {
+            // 仅检查，不上锁
             boolean lockable = DefaultResourceManager.get().lockQuery(BranchType.AT,
                 getDataSourceProxy().getResourceId(), context.getXid(), lockKeys);
-            if (!lockable) {
+            if (!lockable) { // 锁冲突，直接抛LockConflictException让上层去处理
                 throw new LockConflictException();
             }
         } catch (TransactionException e) {
@@ -234,9 +235,9 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void doCommit() throws SQLException {
         if (context.inGlobalTransaction()) {
-            processGlobalTransactionCommit();
+            processGlobalTransactionCommit(); // 会注册分支事务到server端，并对修改的数据上锁（所以，至少会操作server端的两张表，branch_session和lock_table表）
         } else if (context.isGlobalLockRequire()) {
-            processLocalCommitWithGlobalLocks();
+            processLocalCommitWithGlobalLocks(); // 速度快，因为仅对修改的数据进行锁检查（不上锁）。不需要使用事务但不能脏读（读到其他全局事务未整体提交但分支事务已提交的场景）的场景使用
         } else {
             targetConnection.commit();
         }
@@ -255,7 +256,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void processGlobalTransactionCommit() throws SQLException {
         try {
-            // 注册分支，全局事务锁获取（netty通信）
+            // 注册分支事务，对当前分支事务修改的数据进行上锁（netty通信，server端上锁到lock_table表）
             register();
         } catch (TransactionException e) { // 锁冲突异常判断（发生了锁冲突会重新抛出LockConflictException）
             recognizeLockKeyConflictException(e, context.buildLockKeys());
@@ -263,7 +264,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         try {
             // 刷新undo_log到数据库
             UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
-            // 事务提交
+            // 当前分支事务真正提交
             targetConnection.commit();
         } catch (Throwable ex) {
             LOGGER.error("process connectionProxy commit error: {}", ex.getMessage(), ex);

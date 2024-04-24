@@ -221,7 +221,7 @@ class NettyClientChannelManager {
 
     private Channel doConnect(String serverAddress) {
         Channel channelToServer = channels.get(serverAddress);
-        if (channelToServer != null && channelToServer.isActive()) { // channel缓存存在并且激活直接返回
+        if (channelToServer != null && channelToServer.isActive()) { // connect前再检查一次是否有可用的channel缓存，有的话并且是激活状态则直接返回
             return channelToServer;
         }
         Channel channelFromPool;

@@ -79,7 +79,7 @@ public class TccActionInterceptor implements MethodInterceptor, ConfigurationCha
 
     @Override
     public Object invoke(final MethodInvocation invocation) throws Throwable {
-        if (!RootContext.inGlobalTransaction() || disable || RootContext.inSagaBranch()) {
+        if (!RootContext.inGlobalTransaction() || disable || RootContext.inSagaBranch()) { // 没有使用全局事务或者被禁用都不走代理
             //not in transaction, or this interceptor is disabled
             return invocation.proceed();
         }
@@ -88,11 +88,11 @@ public class TccActionInterceptor implements MethodInterceptor, ConfigurationCha
         //try method
         if (businessAction != null) {
             //save the xid
-            String xid = RootContext.getXID();
+            String xid = RootContext. getXID();
             //save the previous branchType
             BranchType previousBranchType = RootContext.getBranchType();
             //if not TCC, bind TCC branchType
-            if (BranchType.TCC != previousBranchType) {
+            if (BranchType.TCC != previousBranchType) { // 转换为TCC模式
                 RootContext.bindBranchType(BranchType.TCC);
             }
             try {

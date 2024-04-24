@@ -76,7 +76,7 @@ public class TransactionalTemplate {
                     }
                     // Continue and execute with new transaction
                     break;
-                case SUPPORTS:
+                case SUPPORTS: // 存在全局事务就加入，不存在就以非全局事务的方式执行
                     // If transaction is not existing, execute without transaction.
                     if (notExistingTransaction(tx)) {
                         return business.execute();
@@ -109,7 +109,7 @@ public class TransactionalTemplate {
             }
 
             // 1.3 If null, create new transaction with role 'GlobalTransactionRole.Launcher'.
-            if (tx == null) { // 全局事务的发起者
+            if (tx == null) { // 新建一个全局事务（全局事务的发起者）
                 tx = GlobalTransactionContext.createNew();
             }
 

@@ -142,7 +142,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     @Override
     public Object sendSyncRequest(Object msg) throws TimeoutException {
         String serverAddress = loadBalance(getTransactionServiceGroup(), msg);
-        // 默认30秒
+        // 请求超时默认30秒
         int timeoutMillis = NettyClientConfig.getRpcRequestTimeout();
         RpcMessage rpcMessage = buildRequestMessage(msg, ProtocolConstants.MSGTYPE_RESQUEST_SYNC);
 
@@ -159,7 +159,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             // put message into basketMap
             BlockingQueue<RpcMessage> basket = CollectionUtils.computeIfAbsent(basketMap, serverAddress,
                 key -> new LinkedBlockingQueue<>());
-            if (!basket.offer(rpcMessage)) {
+            if (!basket.offer(rpcMessage)) { // 将rpc message放入阻塞队列。等待MergedSendRunnable线程发送
                 LOGGER.error("put message into basketMap offer failed, serverAddress:{},rpcMessage:{}",
                         serverAddress, rpcMessage);
                 return null;
@@ -167,13 +167,14 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("offer message: {}", rpcMessage.getBody());
             }
-            if (!isSending) {
+            if (!isSending) { // MergedSendRunnable阻塞中，而上面已经向阻塞队列投了rpc消息。就唤醒MergedSendRunnable来发送rpc message了
                 synchronized (mergeLock) {
                     mergeLock.notifyAll();
                 }
             }
 
             try {
+                // 同步超时等待server端返回response
                 return messageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
             } catch (Exception exx) {
                 LOGGER.error("wait response error:{},ip:{},request:{}",
@@ -331,6 +332,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             while (true) {
                 synchronized (mergeLock) {
                     try {
+                        // 阻塞在这里，避免阻塞队列里没有消息发送时线程空转。
                         mergeLock.wait(MAX_MERGE_SEND_MILLS);
                     } catch (InterruptedException e) {
                     }

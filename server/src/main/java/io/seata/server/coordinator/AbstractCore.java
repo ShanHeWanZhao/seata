@@ -83,6 +83,7 @@ public abstract class AbstractCore implements Core {
                     applicationData, lockKeys, clientId);
             MDC.put(RootContext.MDC_KEY_BRANCH_ID, String.valueOf(branchSession.getBranchId()));
             // branch lock
+            // 给这个branch事务改动的数据资源上锁
             branchSessionLock(globalSession, branchSession);
             try {
                 globalSession.addBranch(branchSession);

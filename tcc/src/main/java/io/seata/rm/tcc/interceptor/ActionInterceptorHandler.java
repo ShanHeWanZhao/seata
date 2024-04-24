@@ -68,6 +68,7 @@ public class ActionInterceptorHandler {
         actionContext.setActionName(actionName);
 
         //Creating Branch Record
+        // 注册TCC分支事务到TC
         String branchId = doTccActionLogStore(method, arguments, businessAction, actionContext);
         actionContext.setBranchId(branchId);
         //MDC put branchId
@@ -76,7 +77,7 @@ public class ActionInterceptorHandler {
         //set the parameter whose type is BusinessActionContext
         Class<?>[] types = method.getParameterTypes();
         int argIndex = 0;
-        for (Class<?> cls : types) {
+        for (Class<?> cls : types) { // 替换掉try方法中的BusinessActionContext参数
             if (cls.isAssignableFrom(BusinessActionContext.class)) {
                 arguments[argIndex] = actionContext;
                 break;

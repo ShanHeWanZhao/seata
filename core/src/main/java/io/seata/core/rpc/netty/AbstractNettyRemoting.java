@@ -77,7 +77,9 @@ public abstract class AbstractNettyRemoting implements Disposable {
     protected final PositiveAtomicCounter idGenerator = new PositiveAtomicCounter();
 
     /**
-     * Obtain the return result through MessageFuture blocking.
+     * Obtain the return result through MessageFuture blocking.  <p/>
+     *
+     * rpc请求的future（异步请求时通过请求id从这个map里获取对应的future来处理结果）
      *
      * @see AbstractNettyRemoting#sendSync
      */
@@ -176,9 +178,11 @@ public abstract class AbstractNettyRemoting implements Disposable {
             return null;
         }
 
+        // 创建message future，用于异步处理消息
         MessageFuture messageFuture = new MessageFuture();
         messageFuture.setRequestMessage(rpcMessage);
         messageFuture.setTimeout(timeoutMillis);
+        // 缓存起来。当response到来时可以获取到
         futures.put(rpcMessage.getId(), messageFuture);
 
         channelWritableCheck(channel, rpcMessage.getBody());
@@ -186,6 +190,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
         String remoteAddr = ChannelUtil.getAddressFromChannel(channel);
         doBeforeRpcHooks(remoteAddr, rpcMessage);
 
+        // 通过socket发送请求
         channel.writeAndFlush(rpcMessage).addListener((ChannelFutureListener) future -> {
             if (!future.isSuccess()) {
                 MessageFuture messageFuture1 = futures.remove(rpcMessage.getId());
@@ -197,6 +202,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
         });
 
         try {
+            // 开始同步超时等待获取结果
             Object result = messageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
             doAfterRpcHooks(remoteAddr, rpcMessage, result);
             return result;
@@ -303,7 +309,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
                             allowDumpStack = false;
                         }
                     }
-                } else {
+                } else { // 这个processor没有配置对应的线程池，则直接在当前线程处理请求
                     try {
                         pair.getFirst().process(ctx, rpcMessage);
                     } catch (Throwable th) {

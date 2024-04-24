@@ -27,6 +27,9 @@ import java.util.Map;
  */
 public class RpcMessage {
 
+    /**
+     * rpc请求唯一id
+     */
     private int id;
     private byte messageType;
     private byte codec;

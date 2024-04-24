@@ -79,7 +79,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
 
     /**
      * 降级检查时间间隔<p/>
-     * 只有当degradeCheck为true是才能设置值，默认为2000毫秒
+     * 只有当degradeCheck为true时才能设置值，默认为2000毫秒
      */
     private static int degradeCheckPeriod;
     /**
