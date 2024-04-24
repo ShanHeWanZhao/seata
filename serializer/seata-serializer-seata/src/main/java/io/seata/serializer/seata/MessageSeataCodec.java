@@ -21,7 +21,8 @@ import java.nio.ByteBuffer;
 import io.netty.buffer.ByteBuf;
 
 /**
- * The interface Message seata codec.
+ * The interface Message seata codec. <p/>
+ * seata模式的消息解码器接口
  */
 public interface MessageSeataCodec {
 

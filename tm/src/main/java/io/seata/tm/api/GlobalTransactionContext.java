@@ -30,7 +30,8 @@ public class GlobalTransactionContext {
     }
 
     /**
-     * Try to create a new GlobalTransaction.
+     * Try to create a new GlobalTransaction. <p/>
+     * 创建一个全局事务发起者的事务
      *
      * @return the new global transaction
      */
@@ -39,7 +40,8 @@ public class GlobalTransactionContext {
     }
 
     /**
-     * Get GlobalTransaction instance bind on current thread.
+     * Get GlobalTransaction instance bind on current thread. <p/>
+     * 获取当前的全局事务，如果没有全局事务就返回null
      *
      * @return null if no transaction context there.
      */
@@ -48,6 +50,7 @@ public class GlobalTransactionContext {
         if (xid == null) {
             return null;
         }
+        // 到这里就代表全局事务已经由其它系统发起了，所以当前的全局事务只能算是参与者
         return new DefaultGlobalTransaction(xid, GlobalStatus.Begin, GlobalTransactionRole.Participant);
     }
 

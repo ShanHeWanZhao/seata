@@ -33,7 +33,8 @@ public enum TransactionExceptionCode {
     BeginFailed,
 
     /**
-     * Lock key conflict transaction exception code.
+     * Lock key conflict transaction exception code. <p/>
+     * 锁冲突异常
      */
     LockKeyConflict,
 

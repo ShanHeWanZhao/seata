@@ -39,7 +39,8 @@ import static io.seata.common.DefaultValues.DEFAULT_CLIENT_REPORT_RETRY_COUNT;
 import static io.seata.common.DefaultValues.DEFAULT_CLIENT_REPORT_SUCCESS_ENABLE;
 
 /**
- * The type Connection proxy.
+ * The type Connection proxy. <p/>
+ * 多例，每获取一个Connection是就会新建一个ConnectionProxy
  *
  * @author sharajava
  */
@@ -54,6 +55,9 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     private static final int REPORT_RETRY_COUNT = ConfigurationFactory.getInstance().getInt(
         ConfigurationKeys.CLIENT_REPORT_RETRY_COUNT, DEFAULT_CLIENT_REPORT_RETRY_COUNT);
 
+    /**
+     * 默认false
+     */
     public static final boolean IS_REPORT_SUCCESS_ENABLE = ConfigurationFactory.getInstance().getBoolean(
         ConfigurationKeys.CLIENT_REPORT_SUCCESS_ENABLE, DEFAULT_CLIENT_REPORT_SUCCESS_ENABLE);
 
@@ -115,9 +119,10 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         }
         // Just check lock without requiring lock by now.
         try {
+            // 仅检查，不上锁
             boolean lockable = DefaultResourceManager.get().lockQuery(BranchType.AT,
                 getDataSourceProxy().getResourceId(), context.getXid(), lockKeys);
-            if (!lockable) {
+            if (!lockable) { // 锁冲突，直接抛LockConflictException让上层去处理
                 throw new LockConflictException(String.format("get lock failed, lockKey: %s",lockKeys));
             }
         } catch (TransactionException e) {
@@ -181,6 +186,9 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         context.appendLockKey(lockKey);
     }
 
+    /**
+     * 提交事务
+     */
     @Override
     public void commit() throws SQLException {
         try {
@@ -227,15 +235,16 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void doCommit() throws SQLException {
         if (context.inGlobalTransaction()) {
-            processGlobalTransactionCommit();
+            processGlobalTransactionCommit(); // 会注册分支事务到server端，并对修改的数据上锁（所以，至少会操作server端的两张表，branch_session和lock_table表）
         } else if (context.isGlobalLockRequire()) {
-            processLocalCommitWithGlobalLocks();
+            processLocalCommitWithGlobalLocks(); // 速度快，因为仅对修改的数据进行锁检查（不上锁）。不需要使用事务但不能脏读（读到其他全局事务未整体提交但分支事务已提交的场景）的场景使用
         } else {
             targetConnection.commit();
         }
     }
 
     private void processLocalCommitWithGlobalLocks() throws SQLException {
+        // 检查锁资源，存在其他事务上锁了就直接抛LockConflictException异常，进行锁重试
         checkLock(context.buildLockKeys());
         try {
             targetConnection.commit();
@@ -247,12 +256,15 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void processGlobalTransactionCommit() throws SQLException {
         try {
+            // 注册分支事务，对当前分支事务修改的数据进行上锁（netty通信，server端上锁到lock_table表）
             register();
-        } catch (TransactionException e) {
+        } catch (TransactionException e) { // 锁冲突异常判断（发生了锁冲突会重新抛出LockConflictException）
             recognizeLockKeyConflictException(e, context.buildLockKeys());
         }
         try {
+            // 刷新undo_log到数据库
             UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
+            // 当前分支事务真正提交
             targetConnection.commit();
         } catch (Throwable ex) {
             LOGGER.error("process connectionProxy commit error: {}", ex.getMessage(), ex);
@@ -266,7 +278,12 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     }
 
     private void register() throws TransactionException {
-        if (!context.hasUndoLog() || !context.hasLockKey()) {
+        /*
+            1.undo_log不存在，代表这个事务期间没有数据的改变
+            2.lockKey不存在，也表示undo_log不存在，同上
+            综上，事务期间没有数据的变化，就不需要再注册分支事务了
+         */
+        if (!context.hasUndoLog() || !context.hasLockKey()) { // undo_log或lockKey不存在，就没必要注册了
             return;
         }
 
@@ -279,14 +296,15 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     @Override
     public void rollback() throws SQLException {
         targetConnection.rollback();
-        if (context.inGlobalTransaction() && context.isBranchRegistered()) {
+        if (context.inGlobalTransaction() && context.isBranchRegistered()) { // 身在全局事务中且当前事务已注册为分支事务才有资格report
             report(false);
         }
         context.reset();
     }
 
     /**
-     * change connection autoCommit to false by seata
+     * change connection autoCommit to false by seata <p/>
+     * 修改当前Connection为非自动提交事务
      *
      * @throws SQLException the sql exception
      */
@@ -327,6 +345,10 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     }
 
     public static class LockRetryPolicy {
+        /**
+         * 全局事务阶段锁冲突是否回滚 <p/>
+         * 默认：true
+         */
         protected static final boolean LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT = ConfigurationFactory
             .getInstance().getBoolean(ConfigurationKeys.CLIENT_LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT, DEFAULT_CLIENT_LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT);
 
@@ -340,6 +362,11 @@ public class ConnectionProxy extends AbstractConnectionProxy {
             // the only case that not need to retry acquire lock hear is
             //    LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT == true && connection#autoCommit == true
             // because it has retry acquire lock when AbstractDMLBaseExecutor#executeAutoCommitTrue
+            /*
+            不需要重试的机制如下：
+                1、开启了锁冲突回滚策略
+                2、当前Connection的自动提交改变过（由true变为false），这种情况已经单独处理了，就不需要再重试了
+             */
             if (LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT && connection.getContext().isAutoCommitChanged()) {
                 return callable.call();
             } else {
@@ -349,19 +376,22 @@ public class ConnectionProxy extends AbstractConnectionProxy {
             }
         }
 
+        /**
+         * 锁冲突重试
+         */
         protected <T> T doRetryOnLockConflict(Callable<T> callable) throws Exception {
             LockRetryController lockRetryController = new LockRetryController();
             while (true) {
                 try {
                     return callable.call();
-                } catch (LockConflictException lockConflict) {
+                } catch (LockConflictException lockConflict) { // 所冲突异常捕获
                     onException(lockConflict);
                     // AbstractDMLBaseExecutor#executeAutoCommitTrue the local lock is released
                     if (connection.getContext().isAutoCommitChanged()
                         && lockConflict.getCode() == TransactionExceptionCode.LockKeyConflictFailFast) {
                         lockConflict.setCode(TransactionExceptionCode.LockKeyConflict);
                     }
-                    lockRetryController.sleep(lockConflict);
+                    lockRetryController.sleep(lockConflict);// sleep后重试，默认重试30次，间隔时间为10毫秒
                 } catch (Exception e) {
                     onException(e);
                     throw e;

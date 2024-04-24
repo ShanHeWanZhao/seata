@@ -63,13 +63,14 @@ public class SelectForUpdateExecutor<T, S extends Statement> extends BaseTransac
         Savepoint sp = null;
         boolean originalAutoCommit = conn.getAutoCommit();
         try {
-            if (originalAutoCommit) {
+            // 在这里单独开启事务。如果没有原事务则直接开启，如果有则新建一个savepoint来开启事务
+            if (originalAutoCommit) { // 没有原事务
                 /*
                  * In order to hold the local db lock during global lock checking
                  * set auto commit value to false first if original auto commit was true
                  */
                 conn.setAutoCommit(false);
-            } else if (dbmd.supportsSavepoints()) {
+            } else if (dbmd.supportsSavepoints()) { // 有原事务，新建一个savepoint来开启内嵌事务
                 /*
                  * In order to release the local db lock when global lock conflict
                  * create a save point if original auto commit was false, then use the save point here to release db
@@ -86,36 +87,41 @@ public class SelectForUpdateExecutor<T, S extends Statement> extends BaseTransac
             while (true) {
                 try {
                     // #870
-                    // execute return Boolean
+                    // execute return
                     // executeQuery return ResultSet
                     rs = statementCallback.execute(statementProxy.getTargetStatement(), args);
 
                     // Try to get global lock of those rows selected
                     TableRecords selectPKRows = buildTableRecords(getTableMeta(), selectPKSQL, paramAppenderList);
+                    // 构建lock key
                     String lockKeys = buildLockKey(selectPKRows);
-                    if (StringUtils.isNullOrEmpty(lockKeys)) {
+                    if (StringUtils.isNullOrEmpty(lockKeys)) { // lock key不存在，代表没有锁冲突，直接就break了
                         break;
                     }
 
-                    if (RootContext.inGlobalTransaction() || RootContext.requireGlobalLock()) {
+                    if (RootContext.inGlobalTransaction() || RootContext.requireGlobalLock()) { // 全局锁的获取和判断必须在@GlobalTransactional or @GlobalLock注解下
                         // Do the same thing under either @GlobalTransactional or @GlobalLock, 
                         // that only check the global lock  here.
                         statementProxy.getConnectionProxy().checkLock(lockKeys);
                     } else {
                         throw new RuntimeException("Unknown situation!");
                     }
+                    // 走到这就代表全局锁没有冲突（要查询的数据没有被多个事务同时处理），可直接返回了
                     break;
                 } catch (LockConflictException lce) {
+                    // 全局锁冲突，本地事务先rollback，释放select .. for update获取到的锁
                     if (sp != null) {
                         conn.rollback(sp);
                     } else {
                         conn.rollback();
                     }
+                    // sleep后会再进行重试
                     // trigger retry
                     lockRetryController.sleep(lce);
                 }
             }
         } finally {
+            // 复原现场
             if (sp != null) {
                 try {
                     if (!JdbcConstants.ORACLE.equalsIgnoreCase(getDbType())) {

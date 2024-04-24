@@ -60,8 +60,13 @@ public class ConnectionContext {
     };
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-
+    /**
+     * 当前全局事务id
+     */
     private String xid;
+    /**
+     * 分支事务id（当分支事务commit时会向server注册，server再返回注册成功的分支事务id）
+     */
     private Long branchId;
     private boolean isGlobalLockRequire;
     private Savepoint currentSavepoint = DEFAULT_SAVEPOINT;

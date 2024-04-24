@@ -77,6 +77,7 @@ public class ActionInterceptorHandler {
         actionContext.setDelayReport(businessAction.isDelayReport());
 
         //Creating Branch Record
+        // 注册TCC分支事务到TC
         String branchId = doTccActionLogStore(method, arguments, businessAction, actionContext);
         actionContext.setBranchId(branchId);
         //MDC put branchId

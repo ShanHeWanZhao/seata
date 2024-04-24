@@ -33,7 +33,8 @@ public class SeataProperties {
      */
     private boolean enabled = true;
     /**
-     * application id
+     * application id <p/>
+     * 默认为 spring.application.name
      */
     private String applicationId;
     /**

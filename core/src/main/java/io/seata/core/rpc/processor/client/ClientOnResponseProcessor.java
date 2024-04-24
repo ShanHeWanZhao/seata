@@ -122,8 +122,10 @@ public class ClientOnResponseProcessor implements RemotingProcessor {
                 mergeMsgMap.clear();
             }
         } else {
+            // 获取对应的请求future
             MessageFuture messageFuture = futures.remove(rpcMessage.getId());
             if (messageFuture != null) {
+                // complete这个future
                 messageFuture.setResultMessage(rpcMessage.getBody());
             } else {
                 if (rpcMessage.getBody() instanceof AbstractResultMessage) {

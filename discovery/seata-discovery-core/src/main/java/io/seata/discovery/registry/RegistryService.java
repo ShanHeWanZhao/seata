@@ -108,11 +108,13 @@ public interface RegistryService<T> {
      * @return the service group name
      */
     default String getServiceGroup(String key) {
+        // service.vgroupMapping. + key
         key = PREFIX_SERVICE_ROOT + CONFIG_SPLIT_CHAR + PREFIX_SERVICE_MAPPING + key;
         if (!SERVICE_GROUP_NAME.contains(key)) {
             ConfigurationCache.addConfigListener(key);
             SERVICE_GROUP_NAME.add(key);
         }
+        // 通过代理，最终是从 ServiceProperties类的vgroupMapping字段，用key来取的value
         return ConfigurationFactory.getInstance().getConfig(key);
     }
 

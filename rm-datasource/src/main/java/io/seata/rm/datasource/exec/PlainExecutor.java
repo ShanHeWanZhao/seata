@@ -20,7 +20,8 @@ import java.sql.Statement;
 import io.seata.rm.datasource.StatementProxy;
 
 /**
- * The type Plain executor.
+ * The type Plain executor.<p/>
+ * 普通的Statement执行器，直接交给原Statement去执行
  *
  * @author sharajava
  *

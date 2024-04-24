@@ -35,8 +35,10 @@ public interface LockStore {
 
 
     /**
-     * Acquire lock boolean.
-     *
+     * Acquire lock boolean. <p/>
+     * 尝试给资源上锁 <p/>
+     * 返回true：代表加锁成功（保存了lock_table表中不存在的锁资源）
+     *返回false：加所失败（已有目标资源被其他全局事务占用）
      * @param lockDOs the lock d os
      * @return the boolean
      */

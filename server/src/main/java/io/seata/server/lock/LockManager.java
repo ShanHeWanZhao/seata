@@ -60,7 +60,8 @@ public interface LockManager {
     boolean releaseLock(BranchSession branchSession) throws TransactionException;
 
     /**
-     * Un lock boolean.
+     * Un lock boolean. <p/>
+     * 释放这个全局事务的所有锁信息（对于db模式来说，就是删除lock_table对应的xid和branch_id的记录）
      *
      * @param globalSession the global session
      * @return the boolean

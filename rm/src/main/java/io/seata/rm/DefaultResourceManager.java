@@ -37,7 +37,8 @@ import io.seata.core.model.ResourceManager;
 public class DefaultResourceManager implements ResourceManager {
 
     /**
-     * all resource managers
+     * all resource managers <p/>
+     * AT模式为DataSourceManager
      */
     protected static Map<BranchType, ResourceManager> resourceManagers
         = new ConcurrentHashMap<>();

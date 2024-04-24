@@ -83,6 +83,10 @@ public class SessionHolder {
     private static long DISTRIBUTED_LOCK_EXPIRE_TIME = CONFIG.getLong(ConfigurationKeys.DISTRIBUTED_LOCK_EXPIRE_TIME, DEFAULT_DISTRIBUTED_LOCK_EXPIRE_TIME);
 
     private static SessionManager ROOT_SESSION_MANAGER;
+    /**
+     * 异步commit全局事务的session管理器 <p/>
+     * taskName为async.commit.data
+     */
     private static SessionManager ASYNC_COMMITTING_SESSION_MANAGER;
     private static SessionManager RETRY_COMMITTING_SESSION_MANAGER;
     private static SessionManager RETRY_ROLLBACKING_SESSION_MANAGER;

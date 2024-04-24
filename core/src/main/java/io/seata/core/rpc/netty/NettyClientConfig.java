@@ -451,6 +451,10 @@ public class NettyClientConfig extends NettyBaseConfig {
         return RPC_DISPATCH_THREAD_PREFIX + "_" + NettyPoolKey.TransactionRole.RMROLE.name();
     }
 
+    /**
+     * 是否启用客户端批量发送消息（默认启用）
+     * @return
+     */
     @Deprecated
     public static boolean isEnableClientBatchSendRequest() {
         return ENABLE_CLIENT_BATCH_SEND_REQUEST;

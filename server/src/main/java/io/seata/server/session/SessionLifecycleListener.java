@@ -64,7 +64,8 @@ public interface SessionLifecycleListener {
     void onAddBranch(GlobalSession globalSession, BranchSession branchSession) throws TransactionException;
 
     /**
-     * On remove branch.
+     * On remove branch. <p/>
+     * 移除分支事务（对于db来说，就是删除branch_table表中对应xid和branch_id的记录）
      *
      * @param globalSession the global session
      * @param branchSession the branch session

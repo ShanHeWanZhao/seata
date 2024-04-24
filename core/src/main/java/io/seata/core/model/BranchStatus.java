@@ -45,7 +45,8 @@ public enum BranchStatus {
 
     /**
      * The Phase one failed.
-     * description:Branch logic is failed at phase one.
+     * description:Branch logic is failed at phase one. <p/>
+     * 客户端一阶段失败（代表本地事务回滚了）
      */
     PhaseOne_Failed(3),
 

@@ -251,6 +251,9 @@ public final class TmNettyRemotingClient extends AbstractNettyRemotingClient {
         };
     }
 
+    /**
+     * 注册一些TM（事务管理器）的消息处理器
+     */
     private void registerProcessor() {
         // 1.registry TC response processor
         ClientOnResponseProcessor onResponseProcessor =

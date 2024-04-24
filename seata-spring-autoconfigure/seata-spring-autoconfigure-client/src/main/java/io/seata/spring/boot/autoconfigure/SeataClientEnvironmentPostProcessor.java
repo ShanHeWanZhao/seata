@@ -60,6 +60,7 @@ public class SeataClientEnvironmentPostProcessor implements EnvironmentPostProce
         PROPERTY_BEAN_MAP.put(CLIENT_RM_PREFIX, RmProperties.class);
         PROPERTY_BEAN_MAP.put(CLIENT_TM_PREFIX, TmProperties.class);
         PROPERTY_BEAN_MAP.put(LOCK_PREFIX, LockProperties.class);
+        // 重点
         PROPERTY_BEAN_MAP.put(SERVICE_PREFIX, ServiceProperties.class);
         PROPERTY_BEAN_MAP.put(UNDO_PREFIX, UndoProperties.class);
         PROPERTY_BEAN_MAP.put(COMPRESS_PREFIX, UndoCompressProperties.class);

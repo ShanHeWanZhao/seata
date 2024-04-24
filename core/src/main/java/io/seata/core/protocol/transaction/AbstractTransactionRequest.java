@@ -27,7 +27,8 @@ import io.seata.core.rpc.RpcContext;
 public abstract class AbstractTransactionRequest extends AbstractMessage {
 
     /**
-     * Handle abstract transaction response.
+     * Handle abstract transaction response.<p/>
+     * request的处理
      *
      * @param rpcContext the rpc context
      * @return the abstract transaction response

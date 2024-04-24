@@ -104,6 +104,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     private NettyClientChannelManager clientChannelManager;
     private final NettyPoolKey.TransactionRole transactionRole;
     private ExecutorService mergeSendExecutorService;
+    /**
+     * DefaultRMHandler
+     */
     private TransactionMessageHandler transactionMessageHandler;
     protected volatile boolean enableClientBatchSendRequest;
 
@@ -115,7 +118,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
                 clientChannelManager.reconnect(getTransactionServiceGroup());
             }
         }, SCHEDULE_DELAY_MILLS, SCHEDULE_INTERVAL_MILLS, TimeUnit.MILLISECONDS);
-        if (this.isEnableClientBatchSendRequest()) {
+        if (this.isEnableClientBatchSendRequest()) { // 启用了批量发送消息，单起一个线程池执行批量消息发送任务
             mergeSendExecutorService = new ThreadPoolExecutor(MAX_MERGE_SEND_THREAD,
                 MAX_MERGE_SEND_THREAD,
                 KEEP_ALIVE_TIME, TimeUnit.MILLISECONDS,
@@ -140,6 +143,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     @Override
     public Object sendSyncRequest(Object msg) throws TimeoutException {
         String serverAddress = loadBalance(getTransactionServiceGroup(), msg);
+        // 请求超时默认30秒
         long timeoutMillis = this.getRpcRequestTimeout();
         RpcMessage rpcMessage = buildRequestMessage(msg, ProtocolConstants.MSGTYPE_RESQUEST_SYNC);
 
@@ -156,7 +160,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             // put message into basketMap
             BlockingQueue<RpcMessage> basket = CollectionUtils.computeIfAbsent(basketMap, serverAddress,
                 key -> new LinkedBlockingQueue<>());
-            if (!basket.offer(rpcMessage)) {
+            if (!basket.offer(rpcMessage)) { // 将rpc message放入阻塞队列。等待MergedSendRunnable线程发送
                 LOGGER.error("put message into basketMap offer failed, serverAddress:{},rpcMessage:{}",
                         serverAddress, rpcMessage);
                 return null;
@@ -164,13 +168,14 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("offer message: {}", rpcMessage.getBody());
             }
-            if (!isSending) {
+            if (!isSending) { // MergedSendRunnable阻塞中，而上面已经向阻塞队列投了rpc消息。就唤醒MergedSendRunnable来发送rpc message了
                 synchronized (mergeLock) {
                     mergeLock.notifyAll();
                 }
             }
 
             try {
+                // 同步超时等待server端返回response
                 return messageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
             } catch (Exception exx) {
                 LOGGER.error("wait response error:{},ip:{},request:{}",
@@ -332,7 +337,8 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     protected abstract long getRpcRequestTimeout();
 
     /**
-     * The type Merged send runnable.
+     * The type Merged send runnable. <p/>
+     * 批量发送客户端seata消息的Runnable
      */
     private class MergedSendRunnable implements Runnable {
 
@@ -341,6 +347,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             while (true) {
                 synchronized (mergeLock) {
                     try {
+                        // 阻塞在这里，避免阻塞队列里没有消息发送时线程空转。
                         mergeLock.wait(MAX_MERGE_SEND_MILLS);
                     } catch (InterruptedException e) {
                     }

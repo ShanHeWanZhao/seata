@@ -119,7 +119,8 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             DEFAULT_TIMEOUT_RETRY_PERIOD);
 
     /**
-     * The Transaction undo log delete period.
+     * The Transaction undo log delete period.<p/>
+     * undo_log定时删除任务执行时间间隔：默认一天
      */
     protected static final long UNDO_LOG_DELETE_PERIOD = CONFIG.getLong(
             ConfigurationKeys.TRANSACTION_UNDO_LOG_DELETE_PERIOD, DEFAULT_UNDO_LOG_DELETE_PERIOD);
@@ -156,6 +157,9 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     private final ScheduledThreadPoolExecutor retryCommitting =
         new ScheduledThreadPoolExecutor(1, new NamedThreadFactory(RETRY_COMMITTING, 1));
 
+    /**
+     * 异步Commit的线程池
+     */
     private final ScheduledThreadPoolExecutor asyncCommitting =
         new ScheduledThreadPoolExecutor(1, new NamedThreadFactory(ASYNC_COMMITTING, 1));
 
@@ -438,10 +442,12 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     }
 
     /**
-     * Handle async committing.
+     * Handle async committing. <p/>
+     * 异步处理全局事务的commit
      */
     protected void handleAsyncCommitting() {
         SessionCondition sessionCondition = new SessionCondition(GlobalStatus.AsyncCommitting);
+        // 对于db模式来说，查询所有状态为AsyncCommitting的GlobalSession（其所有的BranchSession也会查出来）
         Collection<GlobalSession> asyncCommittingSessions =
                 SessionHolder.getAsyncCommittingSessionManager().findGlobalSessions(sessionCondition);
         if (CollectionUtils.isEmpty(asyncCommittingSessions)) {
@@ -470,6 +476,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
         }
         short saveDays = CONFIG.getShort(ConfigurationKeys.TRANSACTION_UNDO_LOG_SAVE_DAYS,
                 UndoLogDeleteRequest.DEFAULT_SAVE_DAYS);
+        // 向每一个RM都发送undo_log的delete请求
         for (Map.Entry<String, Channel> channelEntry : rmChannels.entrySet()) {
             String resourceId = channelEntry.getKey();
             UndoLogDeleteRequest deleteRequest = new UndoLogDeleteRequest();
@@ -499,6 +506,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             () -> SessionHolder.distributedLockAndExecute(RETRY_COMMITTING, this::handleRetryCommitting), 0,
             COMMITTING_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        // 启动异步Commit定时任务
         asyncCommitting.scheduleAtFixedRate(
             () -> SessionHolder.distributedLockAndExecute(ASYNC_COMMITTING, this::handleAsyncCommitting), 0,
             ASYNC_COMMITTING_RETRY_PERIOD, TimeUnit.MILLISECONDS);

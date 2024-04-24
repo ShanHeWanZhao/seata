@@ -44,11 +44,13 @@ import org.slf4j.LoggerFactory;
  */
 public class EnhancedServiceLoader {
 
+    // 当前类load指定的class的加载文件路径
     public static final String SERVICES_DIRECTORY = "META-INF/services/";
     public static final String SEATA_DIRECTORY = "META-INF/seata/";
 
     /**
-     * Class->InnerEnhancedServiceLoader map
+     * Class->InnerEnhancedServiceLoader map <p/>
+     * 静态的全局属性，加载的类和当前InnerEnhancedServiceLoader类的对应缓存
      */
     private static final ConcurrentMap<Class<?>, InnerEnhancedServiceLoader<?>> SERVICE_LOADERS =
             new ConcurrentHashMap<>();
@@ -249,11 +251,26 @@ public class EnhancedServiceLoader {
     private static class InnerEnhancedServiceLoader<S> {
         private static final Logger LOGGER = LoggerFactory.getLogger(InnerEnhancedServiceLoader.class);
 
+        /**
+         * 当前加载的类
+         */
         private final Class<S> type;
         private final Holder<List<ExtensionDefinition<S>>> definitionsHolder = new Holder<>();
+        /**
+         * key: 加载的class的解析定义 <p/>
+         * value: 单例对象的持有器 (只有单例对象才会缓存)
+         */
         private final ConcurrentMap<ExtensionDefinition<S>, Holder<Object>> definitionToInstanceMap =
                 new ConcurrentHashMap<>();
+        /**
+         * key: 注解LoadLevel的name<p/>
+         * value: 指定的类集和
+         */
         private final ConcurrentMap<String, List<ExtensionDefinition<S>>> nameToDefinitionsMap = new ConcurrentHashMap<>();
+        /**
+         * key: 已经解析过加载的class <p/>
+         * value: class的解析定义
+         */
         private final ConcurrentMap<Class<?>, ExtensionDefinition<S>> classToDefinitionMap = new ConcurrentHashMap<>();
 
         private InnerEnhancedServiceLoader(Class<S> type) {
@@ -432,7 +449,7 @@ public class EnhancedServiceLoader {
             if (definition == null) {
                 throw new EnhancedServiceNotFoundException("not found service provider for : " + type.getName());
             }
-            if (Scope.SINGLETON.equals(definition.getScope())) {
+            if (Scope.SINGLETON.equals(definition.getScope())) { // 单例
                 Holder<Object> holder = CollectionUtils.computeIfAbsent(definitionToInstanceMap, definition,
                     key -> new Holder<>());
                 Object instance = holder.get();
@@ -525,7 +542,7 @@ public class EnhancedServiceLoader {
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), Constants.DEFAULT_CHARSET))) {
                         String line;
                         while ((line = reader.readLine()) != null) {
-                            final int ci = line.indexOf('#');
+                            final int ci = line.indexOf('#'); // 注释
                             if (ci >= 0) {
                                 line = line.substring(0, ci);
                             }
@@ -601,6 +618,9 @@ public class EnhancedServiceLoader {
             return null;
         }
 
+        /**
+         * 检查是否已经被加载
+         */
         private boolean isDefinitionContainsClazz(String className, ClassLoader loader) {
             for (Map.Entry<Class<?>, ExtensionDefinition<S>> entry : classToDefinitionMap.entrySet()) {
                 if (!entry.getKey().getName().equals(className)) {

@@ -138,7 +138,8 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
     }
 
     /**
-     * batch Delete undo log.
+     * batch Delete undo log. <p/>
+     * 根据xid和branchId删除undo_log表对应的记录
      *
      * @param xids xid
      * @param branchIds branch Id
@@ -151,6 +152,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
         }
         int xidSize = xids.size();
         int branchIdSize = branchIds.size();
+        // DELETE FROM undo_log WHERE branch_id in (?,?,?...) AND xid in (?,?,?...)
         String batchDeleteSql = toBatchDeleteUndoLogSql(xidSize, branchIdSize);
         try (PreparedStatement deletePST = conn.prepareStatement(batchDeleteSql)) {
             int paramsIndex = 1;
@@ -272,6 +274,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                 }
 
                 // Find UNDO LOG
+                // sql: SELECT * FROM undo_log WHERE branch_id = ? AND  xid = ? FOR UPDATE
                 selectPST = conn.prepareStatement(SELECT_UNDO_LOG_SQL);
                 selectPST.setLong(1, branchId);
                 selectPST.setString(2, xid);
@@ -332,6 +335,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                 // See https://github.com/seata/seata/issues/489
 
                 if (exists) {
+                    // 回滚完就删除undo_log
                     deleteUndoLog(xid, branchId, conn);
                     conn.commit();
                     if (LOGGER.isInfoEnabled()) {

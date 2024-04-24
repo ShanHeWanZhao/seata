@@ -100,7 +100,13 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     private MethodInterceptor interceptor;
     private MethodInterceptor globalTransactionalInterceptor;
 
+    /**
+     *  默认为 ${spring.application.name}
+     */
     private final String applicationId;
+    /**
+     * 默认为  ${spring.application.name}-seata-service-group
+     */
     private final String txServiceGroup;
     private final int mode;
     private static String accessKey;
@@ -216,6 +222,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                     "and we don't recommend you to use default tx-service-group's value provided by seata",
                     DEFAULT_TX_GROUP_OLD, DEFAULT_TX_GROUP);
         }
+        // applicationId和txServiceGroup必须存在
         if (StringUtils.isNullOrEmpty(applicationId) || StringUtils.isNullOrEmpty(txServiceGroup)) {
             throw new IllegalArgumentException(String.format("applicationId: %s, txServiceGroup: %s", applicationId, txServiceGroup));
         }
@@ -268,7 +275,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
      */
     @Override
     protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
-        // do checkers
+        // do checkers  ScannerChecker检查
         if (!doCheckers(bean, beanName)) {
             return bean;
         }
@@ -292,7 +299,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                     Class<?>[] interfacesIfJdk = SpringProxyUtils.findInterfaces(bean);
 
                     if (!existsAnnotation(serviceInterface)
-                            && !existsAnnotation(interfacesIfJdk)) {
+                            && !existsAnnotation(interfacesIfJdk)) { // @GlobalTransactional或@GlobalLock不存在当前类的任何方法或接口上
                         return bean;
                     }
 
@@ -314,6 +321,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                     int pos;
                     for (Advisor avr : advisor) {
                         // Find the position based on the advisor's order, and add to advisors by pos
+                        // 根据SeataInterceptorPosition的位置返回一个符合条件的插入位置索引
                         pos = findAddSeataAdvisorPosition(advised, avr);
                         advised.addAdvisor(pos, avr);
                     }
@@ -329,6 +337,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     private boolean doCheckers(Object bean, String beanName) {
         if (PROXYED_SET.contains(beanName) || EXCLUDE_BEAN_NAME_SET.contains(beanName)
                 || FactoryBean.class.isAssignableFrom(bean.getClass())) {
+            // 已经代理了 or 排除的 or FactoryBean就不包装
             return false;
         }
 
@@ -464,6 +473,9 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     //endregion the methods about findAddSeataAdvisorPosition  END
 
 
+    /**
+     * class或其method上是否存在@GlobalTransactional或@GlobalLock注解
+     */
     private boolean existsAnnotation(Class<?>... classes) {
         if (CollectionUtils.isNotEmpty(classes)) {
             for (Class<?> clazz : classes) {
@@ -534,6 +546,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
             return;
         }
         if (initialized.compareAndSet(false, true)) {
+            // 初始化RM和TM
             initClient();
         }
     }

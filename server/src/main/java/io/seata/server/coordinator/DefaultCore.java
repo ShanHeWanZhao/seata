@@ -126,13 +126,18 @@ public class DefaultCore implements Core {
         return getCore(branchSession.getBranchType()).branchRollback(globalSession, branchSession);
     }
 
+    /**
+     * 开启一个全局事务并存储，最后返回其xid
+     */
     @Override
     public String begin(String applicationId, String transactionServiceGroup, String name, int timeout)
         throws TransactionException {
+        // 创建globalSession
         GlobalSession session = GlobalSession.createGlobalSession(applicationId, transactionServiceGroup, name, timeout);
         MDC.put(RootContext.MDC_KEY_XID, session.getXid());
         session.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
 
+        // 开启session，根据不同的策略（file、db、redis）将session保存起来
         session.begin();
 
         // transaction start event
@@ -161,9 +166,10 @@ public class DefaultCore implements Core {
         boolean shouldCommit = SessionHolder.lockAndExecute(globalSession, () -> {
             if (globalSession.getStatus() == GlobalStatus.Begin) {
                 // Highlight: Firstly, close the session, then no more branch can be registered.
+                // 关闭GlobalSession，并释放锁资源
                 globalSession.closeAndClean();
-                if (globalSession.canBeCommittedAsync()) {
-                    globalSession.asyncCommit();
+                if (globalSession.canBeCommittedAsync()) { // 异步提交，交给定时任务线程池去做
+                    globalSession.asyncCommit();// 将全局事务的状态修改为AsyncCommitting
                     MetricsPublisher.postSessionDoneEvent(globalSession, GlobalStatus.Committed, false, false);
                     return false;
                 } else {
@@ -184,6 +190,7 @@ public class DefaultCore implements Core {
                 return globalSession.getStatus();
             }
         } else {
+            // AsyncCommitting状态的直接完结
             return globalSession.getStatus() == GlobalStatus.AsyncCommitting ? GlobalStatus.Committed : globalSession.getStatus();
         }
     }
@@ -205,6 +212,13 @@ public class DefaultCore implements Core {
 
                 BranchStatus currentStatus = branchSession.getStatus();
                 if (currentStatus == BranchStatus.PhaseOne_Failed) {
+                    // 代表当前全局事务的参与者rollback本地事务了，直接删除这个分支事务
+                    /*
+                        所以，出现这种情况就代表全局事务的参与者回滚了，但是没有被全局事务的发起者感知到异常（参与者回滚），
+                        全局事务还是提交了。
+                        这就告诉我们，全局事务的参与者回滚了事务，一定要让全局事务的发起者感知到异常并触发全局事务的回滚，
+                        否则这就达不到分布式事务的目的
+                     */
                     SessionHelper.removeBranch(globalSession, branchSession, !retrying);
                     return CONTINUE;
                 }
@@ -215,7 +229,7 @@ public class DefaultCore implements Core {
                         branchStatus = BranchStatus.PhaseTwo_Committed;
                     }
                     switch (branchStatus) {
-                        case PhaseTwo_Committed:
+                        case PhaseTwo_Committed: // commit成功，直接删除这个branch
                             SessionHelper.removeBranch(globalSession, branchSession, !retrying);
                             LOGGER.info("Commit branch transaction successfully, xid = {} branchId = {}", globalSession.getXid(), branchSession.getBranchId());
                             return CONTINUE;
@@ -293,7 +307,7 @@ public class DefaultCore implements Core {
         if (!shouldRollBack) {
             return globalSession.getStatus();
         }
-        
+
         boolean rollbackSuccess = doGlobalRollback(globalSession, false);
         return rollbackSuccess ? GlobalStatus.Rollbacked : globalSession.getStatus();
     }
@@ -307,13 +321,16 @@ public class DefaultCore implements Core {
         if (globalSession.isSaga()) {
             success = getCore(BranchType.SAGA).doGlobalRollback(globalSession, retrying);
         } else {
+            // 获取每个分支事务并回滚
             Boolean result = SessionHelper.forEach(globalSession.getReverseSortedBranches(), branchSession -> {
                 BranchStatus currentBranchStatus = branchSession.getStatus();
                 if (currentBranchStatus == BranchStatus.PhaseOne_Failed) {
+                    // 代表分支事务回滚了，不用我们再手动生成补偿sql执行回滚操作
                     SessionHelper.removeBranch(globalSession, branchSession, !retrying);
                     return CONTINUE;
                 }
                 try {
+                    // 分支事务的回滚
                     BranchStatus branchStatus = branchRollback(globalSession, branchSession);
                     if (isXaerNotaTimeout(globalSession, branchStatus)) {
                         LOGGER.info("Rollback branch XAER_NOTA retry timeout, xid = {} branchId = {}", globalSession.getXid(), branchSession.getBranchId());
@@ -321,6 +338,7 @@ public class DefaultCore implements Core {
                     }
                     switch (branchStatus) {
                         case PhaseTwo_Rollbacked:
+                            // 当前分支回滚成功，删除数据库branch_table中对应的记录
                             SessionHelper.removeBranch(globalSession, branchSession, !retrying);
                             LOGGER.info("Rollback branch transaction successfully, xid = {} branchId = {}", globalSession.getXid(), branchSession.getBranchId());
                             return CONTINUE;

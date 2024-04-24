@@ -146,12 +146,12 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
     private void onRequestMessage(ChannelHandlerContext ctx, RpcMessage rpcMessage) {
         Object message = rpcMessage.getBody();
         RpcContext rpcContext = ChannelManager.getContextFromIdentified(ctx.channel());
-        if (!(message instanceof AbstractMessage)) {
+        if (!(message instanceof AbstractMessage)) { // 消息格式不对就直接返回了
             LOGGER.error("unrecognized message:{}", message);
             return;
         }
         // the batch send request message
-        if (message instanceof MergedWarpMessage) {
+        if (message instanceof MergedWarpMessage) { // 是客户端批量消息格式
             if (NettyServerConfig.isEnableTcServerBatchSendResponse() && StringUtils.isNotBlank(rpcContext.getVersion())
                 && Version.isAboveOrEqualVersion150(rpcContext.getVersion())) {
                 List<AbstractMessage> msgs = ((MergedWarpMessage)message).msgs;
@@ -195,7 +195,7 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
                 resultMessage.setMsgs(results.toArray(new AbstractResultMessage[0]));
                 remotingServer.sendAsyncResponse(rpcMessage, ctx.channel(), resultMessage);
             }
-        } else {
+        } else { // 客户端提交的单个消息
             // the single send request message
             final AbstractMessage msg = (AbstractMessage) message;
             if (LOGGER.isInfoEnabled()) {
@@ -204,6 +204,7 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
                 BatchLogHandler.INSTANCE.writeLog(receiveMsgLog);
             }
             AbstractResultMessage result = transactionMessageHandler.onRequest(msg, rpcContext);
+            // 再异步发送处理结果给客户端
             remotingServer.sendAsyncResponse(rpcMessage, ctx.channel(), result);
             if (LOGGER.isInfoEnabled()) {
                 String resultMsgLog = String.format("result msg[single]: %s, clientIp: %s, vgroup: %s", result,

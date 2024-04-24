@@ -36,11 +36,13 @@ import static io.seata.spring.boot.autoconfigure.StarterConstants.SERVICE_PREFIX
 @ConfigurationProperties(prefix = SERVICE_PREFIX)
 public class ServiceProperties implements InitializingBean {
     /**
-     * vgroup->rgroup
+     * vgroup->rgroup <p/>
+     * 默认：my_test_tx_group=default
      */
     private Map<String, String> vgroupMapping = new HashMap<>();
     /**
-     * group list
+     * group list <p/>
+     * 默认: default=127.0.0.1:8091
      */
     private Map<String, String> grouplist = new HashMap<>();
     /**

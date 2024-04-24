@@ -283,7 +283,7 @@ public class BranchSession implements Lockable, Comparable<BranchSession>, Sessi
     }
 
     public boolean lock(boolean autoCommit, boolean skipCheckLock) throws TransactionException {
-        if (this.getBranchType().equals(BranchType.AT)) {
+        if (this.getBranchType().equals(BranchType.AT)) { // AT模式才会锁
             return LockerManagerFactory.getLockManager().acquireLock(this, autoCommit, skipCheckLock);
         }
         return true;

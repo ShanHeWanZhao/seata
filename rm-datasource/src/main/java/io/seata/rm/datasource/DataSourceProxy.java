@@ -46,6 +46,9 @@ public class DataSourceProxy extends AbstractDataSourceProxy implements Resource
 
     private static final String DEFAULT_RESOURCE_GROUP_ID = "DEFAULT";
 
+    /**
+     * 默认：DEFAULT
+     */
     private String resourceGroupId;
 
     private String jdbcUrl;
@@ -54,6 +57,9 @@ public class DataSourceProxy extends AbstractDataSourceProxy implements Resource
 
     private String dbType;
 
+    /**
+     * oracle数据库才会有
+     */
     private String userName;
 
     private String version;
@@ -95,6 +101,7 @@ public class DataSourceProxy extends AbstractDataSourceProxy implements Resource
             throw new IllegalStateException("can not init dataSource", e);
         }
         initResourceId();
+        // 向server注册RM
         DefaultResourceManager.get().registerResource(this);
         TableMetaCacheFactory.registerTableMeta(this);
         //Set the default branch type to 'AT' in the RootContext.
@@ -144,6 +151,10 @@ public class DataSourceProxy extends AbstractDataSourceProxy implements Resource
         return resourceGroupId;
     }
 
+    /**
+     * 对于mysql来说，就是不带参数的mysql的url
+     * @return
+     */
     @Override
     public String getResourceId() {
         if (resourceId == null) {

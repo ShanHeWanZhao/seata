@@ -38,7 +38,8 @@ import io.seata.core.rpc.netty.TmNettyRemotingClient;
 import java.util.concurrent.TimeoutException;
 
 /**
- * The type Default transaction manager.
+ * The type Default transaction manager. <p/>
+ * TM事务管理器，服务全局事务的开启，提交或回滚操作
  *
  * @author sharajava
  */

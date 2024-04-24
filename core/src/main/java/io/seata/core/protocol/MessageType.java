@@ -23,7 +23,8 @@ package io.seata.core.protocol;
 public interface MessageType {
 
     /**
-     * The constant TYPE_GLOBAL_BEGIN.
+     * The constant TYPE_GLOBAL_BEGIN. <p/>
+     * 开启全局事务的消息
      */
     short TYPE_GLOBAL_BEGIN = 1;
     /**

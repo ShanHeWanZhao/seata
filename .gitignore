@@ -45,6 +45,7 @@ dependency-reduced-pom.xml
 /distribution/sessionStore/
 /distribution/*/sessionStore/
 /file_store/
+/serializer/seata-serializer-protobuf/src/main/java/io/seata/serializer/protobuf/generated/
 
 # system ignore
 .DS_Store

@@ -79,7 +79,8 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     @Override
     public T doExecute(Object... args) throws Throwable {
         AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
-        if (connectionProxy.getAutoCommit()) {
+        if (connectionProxy.getAutoCommit()) { // 当前事务为自动提交（代表没有主动开启事务）
+            // 一般就是只用了分布式事务但没有使用本地事务的情况。这时每条dml sql都会被当作分支事务来执行，即执行完后都会操作seata的commit来注册分支事务（增加了rpc通信压力）
             return executeAutoCommitTrue(args);
         } else {
             return executeAutoCommitFalse(args);
@@ -95,9 +96,13 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
      */
     protected T executeAutoCommitFalse(Object[] args) throws Exception {
         try {
+            // 记录sql执行前镜像
             TableRecords beforeImage = beforeImage();
+            // 执行业务sql
             T result = statementCallback.execute(statementProxy.getTargetStatement(), args);
+            // 记录sql执行后的镜像
             TableRecords afterImage = afterImage(beforeImage);
+            // 准备undo_log（只是准备，还未写表的）
             prepareUndoLog(beforeImage, afterImage);
             return result;
         } catch (TableMetaException e) {
@@ -131,7 +136,9 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
 
 
     /**
-     * Execute auto commit true t.
+     * Execute auto commit true t. <p/>
+     * 为autoCommit为true准备的sql执行 <br/>
+     * 先设置autoCommit为false，最后手动commit（保证就算没有开启本地事务也会走seata的commit）
      *
      * @param args the args
      * @return the t
@@ -140,9 +147,11 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     protected T executeAutoCommitTrue(Object[] args) throws Throwable {
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         try {
+            // 改为非自动提交事务
             connectionProxy.changeAutoCommit();
+            // 锁重试机制来commit
             return new LockRetryPolicy(connectionProxy).execute(() -> {
-                T result = executeAutoCommitFalse(args);
+                T result = executeAutoCommitFalse(args); // 走非自动提交事务的commit逻辑（准备undo日志）
                 connectionProxy.commit();
                 return result;
             });

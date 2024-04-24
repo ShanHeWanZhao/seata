@@ -30,7 +30,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * The type My sql undo delete executor.
+ * The type My sql undo delete executor. <p/>
+ * delete语句，回滚就应该是insert
  *
  * @author sharajava
  */

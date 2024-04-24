@@ -103,7 +103,8 @@ public @interface GlobalTransactional {
     /**
      * customized global lock retry interval(unit: ms)
      * you may use this to override global config of "client.rm.lock.retryInterval"
-     * note: 0 or negative number will take no effect(which mean fall back to global config)
+     * note: 0 or negative number will take no effect(which mean fall back to global config) <p/>
+     * 全局事务锁冲突后的重试时间间隔（小于等于0则代表使用全局配置，为10，单位毫秒）
      *
      * @return int
      */

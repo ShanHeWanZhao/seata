@@ -33,6 +33,7 @@ import org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator;
 import org.springframework.aop.support.DefaultIntroductionAdvisor;
 
 /**
+ * DataSource增强器 <p/>
  * @author xingfudeshi@gmail.com
  * @author selfishlover
  */
@@ -83,12 +84,14 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
     @Override
     protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
         // we only care DataSource bean
+        // 非DataSource就不代理
         if (!(bean instanceof DataSource)) {
             return bean;
         }
 
         // when this bean is just a simple DataSource, not SeataDataSourceProxy
-        if (!(bean instanceof SeataDataSourceProxy)) {
+        if (!(bean instanceof SeataDataSourceProxy)) { // 还未代理
+            // 对DataSource进行代理，对于的拦截器为SeataAutoDataSourceProxyAdvice
             Object enhancer = super.wrapIfNecessary(bean, beanName, cacheKey);
             // this mean this bean is either excluded by user or had been proxy before
             if (bean == enhancer) {
@@ -96,6 +99,7 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
             }
             // else, build proxy,  put <origin, proxy> to holder and return enhancer
             DataSource origin = (DataSource) bean;
+            // 构建对应模式的代理，并放入缓存
             SeataDataSourceProxy proxy = buildProxy(origin, dataSourceProxyMode);
             DataSourceProxyHolder.put(origin, proxy);
             LOGGER.info("Auto proxy data source '{}' by '{}' mode.", beanName, dataSourceProxyMode);
@@ -107,6 +111,7 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
          * if you insist on doing so, you must make sure your method return type is DataSource,
          * because this processor will never return any subclass of SeataDataSourceProxy
          */
+        // 重复代理
         LOGGER.warn("Manually register SeataDataSourceProxy(or its subclass) bean is discouraged! bean name: {}", beanName);
         SeataDataSourceProxy proxy = (SeataDataSourceProxy) bean;
         DataSource origin = proxy.getTargetDataSource();

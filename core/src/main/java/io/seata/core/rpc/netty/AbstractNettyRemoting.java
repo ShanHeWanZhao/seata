@@ -76,7 +76,9 @@ public abstract class AbstractNettyRemoting implements Disposable {
     protected final PositiveAtomicCounter idGenerator = new PositiveAtomicCounter();
 
     /**
-     * Obtain the return result through MessageFuture blocking.
+     * Obtain the return result through MessageFuture blocking.  <p/>
+     *
+     * rpc请求的future（异步请求时通过请求id从这个map里获取对应的future来处理结果）
      *
      * @see AbstractNettyRemoting#sendSync
      */
@@ -98,7 +100,10 @@ public abstract class AbstractNettyRemoting implements Disposable {
 
     /**
      * This container holds all processors.
-     * processor type {@link MessageType}
+     * processor type {@link MessageType} <p/>
+     * 请求处理器的映射关系
+     * key: MessageType，代表请求类型 <p/>
+     * value: 请求处理器和线程池的pair
      */
     protected final HashMap<Integer/*MessageType*/, Pair<RemotingProcessor, ExecutorService>> processorTable = new HashMap<>(32);
 
@@ -175,9 +180,11 @@ public abstract class AbstractNettyRemoting implements Disposable {
             return null;
         }
 
+        // 创建message future，用于异步处理消息
         MessageFuture messageFuture = new MessageFuture();
         messageFuture.setRequestMessage(rpcMessage);
         messageFuture.setTimeout(timeoutMillis);
+        // 缓存起来。当response到来时可以获取到
         futures.put(rpcMessage.getId(), messageFuture);
 
         channelWritableCheck(channel, rpcMessage.getBody());
@@ -185,6 +192,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
         String remoteAddr = ChannelUtil.getAddressFromChannel(channel);
         doBeforeRpcHooks(remoteAddr, rpcMessage);
 
+        // 通过socket发送请求
         channel.writeAndFlush(rpcMessage).addListener((ChannelFutureListener) future -> {
             if (!future.isSuccess()) {
                 MessageFuture messageFuture1 = futures.remove(rpcMessage.getId());
@@ -196,6 +204,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
         });
 
         try {
+            // 开始同步超时等待获取结果
             Object result = messageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
             doAfterRpcHooks(remoteAddr, rpcMessage, result);
             return result;
@@ -217,6 +226,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
      * @param rpcMessage rpc message
      */
     protected void sendAsync(Channel channel, RpcMessage rpcMessage) {
+        // 等待channel可写入
         channelWritableCheck(channel, rpcMessage.getBody());
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("write message:" + rpcMessage.getBody() + ", channel:" + channel + ",active?"
@@ -272,9 +282,10 @@ public abstract class AbstractNettyRemoting implements Disposable {
         Object body = rpcMessage.getBody();
         if (body instanceof MessageTypeAware) {
             MessageTypeAware messageTypeAware = (MessageTypeAware) body;
+            // 根据请求指定的类型获取对应的处理器和线程池
             final Pair<RemotingProcessor, ExecutorService> pair = this.processorTable.get((int) messageTypeAware.getTypeCode());
             if (pair != null) {
-                if (pair.getSecond() != null) {
+                if (pair.getSecond() != null) { // 线程池不为空，丢到线程池去做
                     try {
                         pair.getSecond().execute(() -> {
                             try {
@@ -302,7 +313,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
                             allowDumpStack = false;
                         }
                     }
-                } else {
+                } else { // 这个processor没有配置对应的线程池，则直接在当前线程处理请求
                     try {
                         pair.getFirst().process(ctx, rpcMessage);
                     } catch (Throwable th) {

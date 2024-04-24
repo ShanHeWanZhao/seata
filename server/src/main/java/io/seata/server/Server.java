@@ -52,6 +52,7 @@ public class Server {
         ParameterParser parameterParser = new ParameterParser(args);
 
         //initialize the metrics
+        // 统计相关功能初始化
         MetricsManager.get().init();
 
         ThreadPoolExecutor workingThreads = new ThreadPoolExecutor(NettyServerConfig.getMinServerPoolSize(),
@@ -70,20 +71,23 @@ public class Server {
                 XID.setIpAddress(NetUtil.getLocalIp());
             }
         }
-
+        // 创建netty相关对象
         NettyRemotingServer nettyRemotingServer = new NettyRemotingServer(workingThreads);
         XID.setPort(nettyRemotingServer.getListenPort());
         UUIDGenerator.init(parameterParser.getServerNode());
         //log store mode : file, db, redis
         SessionHolder.init();
         LockerManagerFactory.init();
+        // 创建TC
         DefaultCoordinator coordinator = DefaultCoordinator.getInstance(nettyRemotingServer);
+        // 启动一些定时任务，包括异步全局事务commit操作
         coordinator.init();
         nettyRemotingServer.setHandler(coordinator);
 
         // let ServerRunner do destroy instead ShutdownHook, see https://github.com/seata/seata/issues/4028
         ServerRunner.addDisposable(coordinator);
 
+        // 注册消息处理器并构建netty的ServerBootstrap，开启端口的监听
         nettyRemotingServer.init();
     }
 }

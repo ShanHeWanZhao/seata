@@ -59,6 +59,9 @@ public interface StarterConstants {
 
     String CONFIG_PREFIX = SEATA_PREFIX + ".config";
     String CONFIG_NACOS_PREFIX = CONFIG_PREFIX + ".nacos";
+    /**
+     * seata.config.consul
+     */
     String CONFIG_CONSUL_PREFIX = CONFIG_PREFIX + ".consul";
     String CONFIG_ETCD3_PREFIX = CONFIG_PREFIX + ".etcd3";
     String CONFIG_APOLLO_PREFIX = CONFIG_PREFIX + ".apollo";
@@ -88,6 +91,10 @@ public interface StarterConstants {
 
 
     int MAP_CAPACITY = 64;
+    /**
+     * 支持spring的属性配置缓存 <p/>
+     * key为配置的前缀，value为对应的 spring properties bean的class（再通过beanFactory获取对应的bean）
+     */
     HashMap<String, Class<?>> PROPERTY_BEAN_MAP = new HashMap<>(MAP_CAPACITY);
     /**
      * The following special keys need to be normalized.

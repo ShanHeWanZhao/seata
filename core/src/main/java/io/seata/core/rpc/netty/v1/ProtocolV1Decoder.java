@@ -53,7 +53,8 @@ import java.util.Map;
  * <li>Head Length: include head data from magic code to head map. </li>
  * <li>Body Length: Full Length - Head Length</li>
  * </p>
- * https://github.com/seata/seata/issues/893
+ * https://github.com/seata/seata/issues/893 <p/>
+ * RpcMessage对象的Decoder
  *
  * @author Geng Zhang
  * @see ProtocolV1Encoder

@@ -44,7 +44,8 @@ public abstract class AbstractResourceManager implements ResourceManager {
     protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractResourceManager.class);
 
     /**
-     * registry branch record
+     * registry branch record <p/>
+     * 向seata server注册分支事务
      *
      * @param branchType the branch type
      * @param resourceId the resource id
@@ -65,7 +66,7 @@ public abstract class AbstractResourceManager implements ResourceManager {
             request.setApplicationData(applicationData);
 
             BranchRegisterResponse response = (BranchRegisterResponse) RmNettyRemotingClient.getInstance().sendSyncRequest(request);
-            if (response.getResultCode() == ResultCode.Failed) {
+            if (response.getResultCode() == ResultCode.Failed) { // 分支注册失败（最有可能是锁冲突，对应的异常码是LockKeyConflict）
                 throw new RmTransactionException(response.getTransactionExceptionCode(),
                     String.format("branch register failed, xid: %s, errMsg: %s ", xid, response.getMsg()));
             }

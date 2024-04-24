@@ -144,7 +144,9 @@ public class TableRecords implements java.io.Serializable {
     }
 
     /**
-     * Pk rows list.
+     * Pk rows list. <><p/>
+     * 获取主键列的所有行信息 <><p/>
+     * List中的每个map为一行数据（key为主键name，value为其主键值等信息，因为mysql表可能是多主键的，所以用map来装）
      *
      * @return return a list. each element of list is a map,the map hold the pk column name as a key and field as the value
      */

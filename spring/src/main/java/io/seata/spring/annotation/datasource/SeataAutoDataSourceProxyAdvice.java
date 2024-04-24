@@ -49,6 +49,7 @@ public class SeataAutoDataSourceProxyAdvice implements MethodInterceptor, Introd
             return invocation.proceed();
         }
 
+        // 拿到该DataSource对应的SeataDataSourceProxy，去执行相同的方法
         Method method = invocation.getMethod();
         String name = method.getName();
         Class<?>[] parameterTypes = method.getParameterTypes();
@@ -74,10 +75,10 @@ public class SeataAutoDataSourceProxyAdvice implements MethodInterceptor, Introd
     }
 
     boolean inExpectedContext() {
-        if (RootContext.requireGlobalLock()) {
+        if (RootContext.requireGlobalLock()) { // 全局锁需要
             return true;
         }
-        if (!RootContext.inGlobalTransaction()) {
+        if (!RootContext.inGlobalTransaction()) { // 非GlobalTransactional不需要
             return false;
         }
         return branchType == RootContext.getBranchType();

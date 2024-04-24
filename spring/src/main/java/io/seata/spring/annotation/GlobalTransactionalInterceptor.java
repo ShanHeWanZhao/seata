@@ -83,15 +83,29 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
     private volatile boolean disable;
     private int order;
     protected AspectTransactional aspectTransactional;
+    /**
+     * 降级检查时间间隔<p/>
+     * 只有当degradeCheck为true时才能设置值，默认为2000毫秒
+     */
     private static int degradeCheckPeriod;
     private static final AtomicBoolean ATOMIC_DEGRADE_CHECK = new AtomicBoolean(false);
+    /**
+     * 降级检查失败允许的次数<p/>
+     * 只有当degradeCheck为true是才能设置值，默认为10
+     */
     private static int degradeCheckAllowTimes;
     private static volatile Integer degradeNum = 0;
+    /**
+     * 降级检查连续成功次数
+     */
     private static volatile Integer reachNum = 0;
     private static final EventBus EVENT_BUS = new GuavaEventBus("degradeCheckEventBus", true);
     private static volatile ScheduledThreadPoolExecutor executor;
     //region DEFAULT_GLOBAL_TRANSACTION_TIMEOUT
 
+    /**
+     * 全局事务超时时间：默认60秒
+     */
     private static int defaultGlobalTransactionTimeout = 0;
 
     private void initDefaultGlobalTransactionTimeout() {
@@ -138,7 +152,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         degradeCheckAllowTimes = ConfigurationFactory.getInstance()
                 .getInt(ConfigurationKeys.CLIENT_DEGRADE_CHECK_ALLOW_TIMES, DEFAULT_TM_DEGRADE_CHECK_ALLOW_TIMES);
         EVENT_BUS.register(this);
-        if (degradeCheck && degradeCheckPeriod > 0 && degradeCheckAllowTimes > 0) {
+        if (degradeCheck && degradeCheckPeriod > 0 && degradeCheckAllowTimes > 0) { // 开启降级检查
             startDegradeCheck();
         }
         ConfigurationCache.addConfigListener(ConfigurationKeys.CLIENT_DEGRADE_CHECK, this);
@@ -155,6 +169,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
             final GlobalTransactional globalTransactionalAnnotation =
                 getAnnotation(method, targetClass, GlobalTransactional.class);
             final GlobalLock globalLockAnnotation = getAnnotation(method, targetClass, GlobalLock.class);
+            // 是否禁用全局事务（开启了禁用 或 降级检查超过连续超过指定次数失败）
             boolean localDisable = disable || (ATOMIC_DEGRADE_CHECK.get() && degradeNum >= degradeCheckAllowTimes);
             if (!localDisable) {
                 if (globalTransactionalAnnotation != null || this.aspectTransactional != null) {
@@ -342,7 +357,8 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
     }
 
     /**
-     * auto upgrade service detection
+     * auto upgrade service detection <p/>
+     * 通过事件发布机制来实现降级或开启
      */
     private static void startDegradeCheck() {
         if (!ATOMIC_DEGRADE_CHECK.compareAndSet(false, true)) {
@@ -379,9 +395,9 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
     }
 
     @Subscribe
-    public static void onDegradeCheck(DegradeCheckEvent event) {
-        if (event.isRequestSuccess()) {
-            if (degradeNum >= degradeCheckAllowTimes) {
+    public static void onDegradeCheck(DegradeCheckEvent event) { // 10
+        if (event.isRequestSuccess()) { // 成功
+            if (degradeNum >= degradeCheckAllowTimes) { // 降级了
                 reachNum++;
                 if (reachNum >= degradeCheckAllowTimes) {
                     reachNum = 0;
@@ -390,18 +406,18 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
                         LOGGER.info("the current global transaction has been restored");
                     }
                 }
-            } else if (degradeNum != 0) {
+            } else if (degradeNum != 0) { // 还没降级但有失败得情况，重置degradeNum，因为不连续了
                 degradeNum = 0;
             }
-        } else {
-            if (degradeNum < degradeCheckAllowTimes) {
+        } else { // 失败
+            if (degradeNum < degradeCheckAllowTimes) { // 还没降级
                 degradeNum++;
                 if (degradeNum >= degradeCheckAllowTimes) {
                     if (LOGGER.isWarnEnabled()) {
                         LOGGER.warn("the current global transaction has been automatically downgraded");
                     }
                 }
-            } else if (reachNum != 0) {
+            } else if (reachNum != 0) { // 降级了且成功了几次，但由于这次又失败了，在重新来过
                 reachNum = 0;
             }
         }
@@ -417,6 +433,10 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         this.order = order;
     }
 
+    /**
+     * 代表当前拦截器插入的位置 <p/>
+     * 必须在spring的事务拦截之前，全局事务范围必须大于spring的事务
+     */
     @Override
     public SeataInterceptorPosition getPosition() {
         return SeataInterceptorPosition.BeforeTransaction;

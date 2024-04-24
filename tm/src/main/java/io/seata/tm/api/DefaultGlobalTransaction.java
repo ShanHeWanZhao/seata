@@ -42,12 +42,24 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     private static final String DEFAULT_GLOBAL_TX_NAME = "default";
 
+    /**
+     * DefaultTransactionManager
+     */
     private TransactionManager transactionManager;
 
+    /**
+     * 当前全局事务id
+     */
     private String xid;
 
+    /**
+     * 全局事务的状态
+     */
     private GlobalStatus status;
 
+    /**
+     * 当前全局事务的角色（发起者 or 参与者）
+     */
     private GlobalTransactionRole role;
 
     /**
@@ -56,10 +68,15 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
      * @see System#currentTimeMillis();
      */
     private long createTime;
-
+    /**
+     * commit失败的重试次数：默认 5
+     */
     private static final int COMMIT_RETRY_COUNT = ConfigurationFactory.getInstance().getInt(
         ConfigurationKeys.CLIENT_TM_COMMIT_RETRY_COUNT, DEFAULT_TM_COMMIT_RETRY_COUNT);
 
+    /**
+     * rollback失败的重试次数：默认 5
+     */
     private static final int ROLLBACK_RETRY_COUNT = ConfigurationFactory.getInstance().getInt(
         ConfigurationKeys.CLIENT_TM_ROLLBACK_RETRY_COUNT, DEFAULT_TM_ROLLBACK_RETRY_COUNT);
 
@@ -97,14 +114,14 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
     @Override
     public void begin(int timeout, String name) throws TransactionException {
         this.createTime = System.currentTimeMillis();
-        if (role != GlobalTransactionRole.Launcher) {
-            assertXIDNotNull();
+        if (role != GlobalTransactionRole.Launcher) { // 不是全局事务的发起者就不需要重复开启了
+            assertXIDNotNull();// 这时xid肯定是非null的
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Ignore Begin(): just involved in global transaction [{}]", xid);
             }
             return;
         }
-        assertXIDNull();
+        assertXIDNull(); // 第一次开启，xid是null，还没请求服务端返回xid的
         String currentXid = RootContext.getXID();
         if (currentXid != null) {
             throw new IllegalStateException("Global transaction already exists," +
@@ -121,7 +138,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
     @SuppressWarnings("lgtm[java/constant-comparison]")
     @Override
     public void commit() throws TransactionException {
-        if (role == GlobalTransactionRole.Participant) {
+        if (role == GlobalTransactionRole.Participant) { // 非事物的发起者不需要真的的提交事务
             // Participant has no responsibility of committing
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Ignore Commit(): just involved in global transaction [{}]", xid);
@@ -132,6 +149,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("transaction {} will be commit", xid);
         }
+        // 事务提交失败的重试次数
         int retry = COMMIT_RETRY_COUNT <= 0 ? DEFAULT_TM_COMMIT_RETRY_COUNT : COMMIT_RETRY_COUNT;
         try {
             while (retry > 0) {
@@ -159,7 +177,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
     @SuppressWarnings("lgtm[java/constant-comparison]")
     @Override
     public void rollback() throws TransactionException {
-        if (role == GlobalTransactionRole.Participant) {
+        if (role == GlobalTransactionRole.Participant) { // 事务的参与者不应该来操作回滚
             // Participant has no responsibility of rollback
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Ignore Rollback(): just involved in global transaction [{}]", xid);
@@ -170,6 +188,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("transaction {} will be rollback", xid);
         }
+        // 默认5次的全局事务回滚重试
         int retry = ROLLBACK_RETRY_COUNT <= 0 ? DEFAULT_TM_ROLLBACK_RETRY_COUNT : ROLLBACK_RETRY_COUNT;
         try {
             while (retry > 0) {
@@ -283,6 +302,9 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         }
     }
 
+    /**
+     * xid必须为空
+     */
     private void assertXIDNull() {
         if (xid != null) {
             throw new IllegalStateException();

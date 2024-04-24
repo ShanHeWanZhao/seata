@@ -40,9 +40,9 @@ import static io.seata.core.exception.TransactionExceptionCode.LockKeyConflict;
  * @author ph3636
  */
 public class ATCore extends AbstractCore {
-    
+
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     public ATCore(RemotingServer remotingServer) {
         super(remotingServer);
     }
@@ -74,7 +74,7 @@ public class ATCore extends AbstractCore {
             }
         }
         try {
-            if (!branchSession.lock(autoCommit, skipCheckLock)) {
+            if (!branchSession.lock(autoCommit, skipCheckLock)) { // 直接抛出锁冲突异常，让客户端重试
                 throw new BranchTransactionException(LockKeyConflict,
                     String.format("Global lock acquire failed xid = %s branchId = %s", globalSession.getXid(),
                         branchSession.getBranchId()));

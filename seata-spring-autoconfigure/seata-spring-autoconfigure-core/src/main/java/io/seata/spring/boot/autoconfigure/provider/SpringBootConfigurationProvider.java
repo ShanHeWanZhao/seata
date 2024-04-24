@@ -61,6 +61,7 @@ public class SpringBootConfigurationProvider implements ExtConfigurationProvider
     public Configuration provide(Configuration originalConfiguration) {
         return (Configuration)Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[]{Configuration.class}
             , (proxy, method, args) -> {
+                // 拦截有参数的get方法
                 if (method.getName().startsWith(INTERCEPT_METHOD_PREFIX) && args.length > 0) {
                     Object result;
                     String rawDataId = (String)args[0];
@@ -179,8 +180,10 @@ public class SpringBootConfigurationProvider implements ExtConfigurationProvider
     }
 
     /**
-     * convert data id
-     *
+     * convert data id <p/>
+     * 1. 如果rawDataId末尾为 'grouplist'，则移除这个后缀，再在前面添加上 ‘seata.service.grouplist.’并返回 <p/>
+     * 例：rawDataId=my.demo.grouplist，则会返回：seata.service.grouplist.my.demo <p/>
+     * 2. 其他情况，直接在前面添加 'seata.'
      * @param rawDataId
      * @return dataId
      */
@@ -189,29 +192,37 @@ public class SpringBootConfigurationProvider implements ExtConfigurationProvider
             String suffix = StringUtils.removeStart(StringUtils.removeEnd(rawDataId, DOT + SPECIAL_KEY_GROUPLIST),
                 SPECIAL_KEY_SERVICE + DOT);
             // change the format of default.grouplist to grouplist.default
+            // [seata.service.grouplist.] + suffix
             return SERVICE_PREFIX + DOT + SPECIAL_KEY_GROUPLIST + DOT + suffix;
         }
         return SEATA_PREFIX + DOT + rawDataId;
     }
 
     /**
-     * Get property prefix
+     * Get property prefix <p/>
+     * 获取dataId的前缀（. 为分隔符）<p/>
+     * 如果dataId包含 vgroupMapping或grouplist，则直接返回字符串 seata.service
      *
      * @param dataId
      * @return propertyPrefix
      */
     private String getPropertyPrefix(String dataId) {
-        if (dataId.contains(SPECIAL_KEY_VGROUP_MAPPING)) {
+        if (dataId.contains(SPECIAL_KEY_VGROUP_MAPPING)) { // 字符串包含 vgroupMapping
+            // seata.service
             return SERVICE_PREFIX;
         }
-        if (dataId.contains(SPECIAL_KEY_GROUPLIST)) {
+        if (dataId.contains(SPECIAL_KEY_GROUPLIST)) { // 字符串包含 grouplist
+            // seata.service
             return SERVICE_PREFIX;
         }
         return StringUtils.substringBeforeLast(dataId, String.valueOf(DOT));
     }
 
     /**
-     * Get property suffix
+     * Get property suffix<p/>
+     * 获取dataId的后缀（. 为分隔符）<p/>
+     *  如果dataId包含 vgroupMapping，则直接返回 vgroupMapping <p/>
+     *  如果dataId包含 grouplist，则直接返回 grouplist
      *
      * @param dataId
      * @return propertySuffix

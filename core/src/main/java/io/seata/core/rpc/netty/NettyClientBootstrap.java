@@ -108,12 +108,13 @@ public class NettyClientBootstrap implements RemotingBootstrap {
                 new NamedThreadFactory(getThreadPrefix(nettyClientConfig.getClientWorkerThreadPrefix()),
                     nettyClientConfig.getClientWorkerThreads()));
         }
-        this.bootstrap.group(this.eventLoopGroupWorker).channel(
-            nettyClientConfig.getClientChannelClazz()).option(
-            ChannelOption.TCP_NODELAY, true).option(ChannelOption.SO_KEEPALIVE, true).option(
-            ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyClientConfig.getConnectTimeoutMillis()).option(
-            ChannelOption.SO_SNDBUF, nettyClientConfig.getClientSocketSndBufSize()).option(ChannelOption.SO_RCVBUF,
-            nettyClientConfig.getClientSocketRcvBufSize());
+        this.bootstrap.group(this.eventLoopGroupWorker)
+                .channel(nettyClientConfig.getClientChannelClazz())
+                .option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyClientConfig.getConnectTimeoutMillis())
+                .option(ChannelOption.SO_SNDBUF, nettyClientConfig.getClientSocketSndBufSize())
+                .option(ChannelOption.SO_RCVBUF, nettyClientConfig.getClientSocketRcvBufSize());
 
         if (nettyClientConfig.enableNative()) {
             if (PlatformDependent.isOsx()) {
@@ -170,6 +171,7 @@ public class NettyClientBootstrap implements RemotingBootstrap {
         Channel channel;
         ChannelFuture f = this.bootstrap.connect(address);
         try {
+            // 默认等待10秒
             f.await(this.nettyClientConfig.getConnectTimeoutMillis(), TimeUnit.MILLISECONDS);
             if (f.isCancelled()) {
                 throw new FrameworkException(f.cause(), "connect cancelled, can not connect to services-server.");

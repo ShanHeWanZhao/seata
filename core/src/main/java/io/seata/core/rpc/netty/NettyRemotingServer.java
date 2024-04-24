@@ -44,6 +44,9 @@ public class NettyRemotingServer extends AbstractNettyRemotingServer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyRemotingServer.class);
 
+    /**
+     * DefaultCoordinator
+     */
     private TransactionMessageHandler transactionMessageHandler;
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -93,6 +96,9 @@ public class NettyRemotingServer extends AbstractNettyRemotingServer {
         channel.close();
     }
 
+    /**
+     * 在服务端注册客户端消息处理器
+     */
     private void registerProcessor() {
         // 1. registry on request message processor
         ServerOnRequestProcessor onRequestProcessor =

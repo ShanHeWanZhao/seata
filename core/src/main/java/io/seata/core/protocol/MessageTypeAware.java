@@ -21,7 +21,8 @@ package io.seata.core.protocol;
 public interface MessageTypeAware {
 
     /**
-     * Gets type code.
+     * Gets type code. <p/>
+     * 获取当前消息类型（都定义在MessageType里）
      *
      * @return the type code
      */
